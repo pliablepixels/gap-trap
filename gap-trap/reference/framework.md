@@ -2,8 +2,8 @@
 
 What gap-trap installs, in agent terms. The origin is zmNinjaNg
 (`docs/developer-guide/14-agent-development-model.rst` there), where one
-maintainer landed 2,900 commits in nine months with agents writing the
-code and no one reading diffs. This file is the model; the templates
+maintainer landed 2,313 commits in eight months (fourteen reverts) with
+agents writing the code and no one reading diffs. This file is the model; the templates
 are its files.
 
 ## Four kinds of instruction

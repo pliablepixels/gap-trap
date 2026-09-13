@@ -4,7 +4,7 @@ Turns vibe coding into high quality code. gap-trap is a skill for coding agents 
 
 ## Where it comes from
 
-The framework is the one [zmNinjaNg](https://github.com/ZoneMinder/zmNinjaNg) runs on, where agents write most of the code and no one reads the diffs line by line. The inspiration and the evidence are in chapter 14 of its developer guide, [Agent development model](https://zmninjang.readthedocs.io/en/latest/developer-guide/14-agent-development-model.html): what a rule, a contract, and a gate are, how one feature goes from spec to merge, which gates caught what, and the numbers behind it (2,900 commits in nine months, fourteen reverts). gap-trap is that model made portable.
+The framework is the one [zmNinjaNg](https://github.com/ZoneMinder/zmNinjaNg) runs on, where agents write most of the code and no one reads the diffs line by line. The inspiration and the evidence are in chapter 14 of its developer guide, [Agent development model](https://zmninjang.readthedocs.io/en/latest/developer-guide/14-agent-development-model.html): what a rule, a contract, and a gate are, how one feature goes from spec to merge, which gates caught what, and the numbers behind it (2,313 commits in eight months with fourteen reverts, when the chapter was written). gap-trap is that model made portable.
 
 ## What you get
 
