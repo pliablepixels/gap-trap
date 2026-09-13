@@ -1,6 +1,19 @@
 # gap-trap
 
-Turns vibe coding into high quality code. gap-trap is a skill for coding agents that sets up rules and gates in your repository, so the code an AI writes stays correct without you reviewing every line. A rule the agent can skip is a suggestion; a rule with a gate fails the commit, the push, or the CI run. gap-trap finds the places in your code that need a rule, writes the rules, and adds the gates: contracts for the parts of the code that have one right way to do things, a CI check that proves each new test can fail, counts that may fall but never grow, and playbooks that hold what the project has learned. It also installs [slop-mop](https://github.com/pliablepixels/slop-mop) for the prose.
+Turns vibe coding into high quality code.
+
+You let an AI agent write your code. It is fast, so you stop reading every diff. Then quality drifts. The agent calls the network directly instead of using your HTTP wrapper, logs a token, or writes a test that passes without checking anything. Nothing stops it, because your rules live in a file the agent can ignore.
+
+gap-trap fixes that. Run it once in a repository. It reads the code, writes the rules that fit that codebase, and adds a gate for each rule. A gate is a check that fails the commit or the CI run when the rule is broken. The agent cannot skip a gate.
+
+What it sets up:
+
+- Contracts. For each part of the code that has one right way to do things (HTTP, logging, settings, auth), a short entry that says what to use and what never to use, plus a check that finds bypasses.
+- Proven red. A CI job that runs every new test against the old code and fails when the test passes there. A test that cannot fail proves nothing.
+- Ratchets. Counts of known problems, such as the lint backlog or files over 400 lines, that may go down but never up.
+- Playbooks. The facts the project learned the hard way, written down so the next session does not learn them again.
+
+It also installs [slop-mop](https://github.com/pliablepixels/slop-mop), a sibling skill, so the agent's docs, commit messages, and PR bodies read like a person wrote them.
 
 ## Where it comes from
 
