@@ -52,14 +52,18 @@ Spec (one test file, runs with the unit tests):
    address.
 7. Every `rule <ID>` cited in the developer docs exists in `AGENTS.md`.
 8. Grep gates for each contract Never clause a text search settles,
-   comments stripped, with the sanctioned file(s) exempt. Zero hits is
-   the number when the tree is clean today; a ratchet count when it is
-   not.
+   comments stripped, with the sanctioned file(s) exempt. The
+   instruction gate holds only the clauses that are clean today (zero
+   is the number). A clause with violations today goes into the ratchet
+   as a count instead, so the backlog can fall but not grow and the
+   instruction gate never carries an allowed number.
 
 References: `templates/gates/instruction-gate.test.ts` (vitest),
 `templates/gates/instruction_gate_test.py` (pytest),
 `templates/gates/instruction-gate.sh` (any stack; config through `GT_*`
-environment variables or the block at the top).
+environment variables or the block at the top). The vitest port imports
+`node:*` and uses `__dirname`; a repo whose type check covers the test
+directory needs `@types/node` installed or the gate itself fails `tsc`.
 
 ## Proven red
 
@@ -86,11 +90,13 @@ grows, prints improvements when one falls, and fails when the baseline
 sits more than a small slack above the real count (a raised number
 nobody lowered back). `--update` rewrites the baseline.
 
-Counters worth starting with: lint problems per rule (from the linter's
-JSON output), test files that mock the repo's own modules, assertions
-that only prove existence, files over a length limit (the linter's
-max-lines rule feeds the lint ratchet with no new code), fixed sleeps in
-end-to-end steps.
+The ratchet is always installed, because C2, C6, and C7 in `AGENTS.md`
+name it as their gate. Seed it with what the repo supports: files over
+the C2 length limit (always), lint problems per rule when a linter runs
+(from its JSON output; ESLint's `max-lines` rule then covers C2 with no
+new code), each contract Never clause that has violations today, test
+files that mock the repo's own modules, assertions that only prove
+existence, fixed sleeps in end-to-end steps.
 
 References: `templates/gates/ratchet.mjs` (Node) and
 `templates/gates/ratchet.sh` (any stack: counters are shell one-liners in
@@ -101,9 +107,13 @@ References: `templates/gates/ratchet.mjs` (Node) and
 Spec: a CI job on same-repo, non-bot PRs. Fails when `## Acceptance`
 has no content after stripping HTML comments. On a `feat` title, fails
 when `## Spec` has no content. The template is
-`templates/pull_request_template.md`.
+`templates/pull_request_template.md`. The check lives in a script the
+job calls, so it can be proven red locally with a body on stdin. The
+title and body reach the script through environment variables, never
+interpolated into the `run:` text (a PR title is attacker-controlled).
 
-Reference: the `pr-acceptance` job in `templates/gates/github-ci.yml`.
+Reference: `templates/gates/pr-body-check.sh`, called by the
+`pr-acceptance` job in `templates/gates/github-ci.yml`.
 On GitLab the same shell reads `CI_MERGE_REQUEST_DESCRIPTION` and
 `CI_MERGE_REQUEST_TITLE` in a `rules: - if: $CI_MERGE_REQUEST_IID` job.
 The three CI jobs (gates, proven red, PR body) map one to one onto any

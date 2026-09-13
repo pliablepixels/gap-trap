@@ -18,9 +18,9 @@
  * Skips, and says so: a range that changes no source; a source change with no
  * unit test whose title type is docs, chore, ci, refactor, build, style, or
  * test (no behavior change to prove); a range whose only changed tests are
- * browser e2e steps, which need a ZoneMinder and cannot run here. Fails when a
- * behavior change arrives with no changed test at all. A changed unit test is
- * always proved, whatever the title claims.
+ * end-to-end steps, which need a live server and cannot run here. Fails when
+ * a behavior change arrives with no changed test at all. A changed unit test
+ * is always proved, whatever the title claims.
  *
  * A red run is not one proof but two. A test that fails an assertion on the
  * old code shows the assertion bites. A test that fails only because it
@@ -43,7 +43,8 @@ export const SKIP_TYPES = ['docs', 'chore', 'ci', 'refactor', 'build', 'style', 
 // ADAPT: the three classifiers below are the whole port. Unit tests are what
 // gets proven; test support travels with them but is not proven (repo-hygiene
 // gates are proven red by scratch violation instead); non-code never counts
-// as a behavior change. The origin repo's values are shown. APP_DIR is the
+// as a behavior change. UNIT_TEST wins where both match, so a `__tests__/`
+// file is a unit test and TEST_SUPPORT only catches helpers beside it. The origin repo's values are shown. APP_DIR is the
 // directory the test runner runs from, relative to the repo root ('' for the
 // root itself).
 const APP_DIR = 'app';
@@ -201,8 +202,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const [base, head] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
   const titleIndex = process.argv.indexOf('--title');
   const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  // An empty --title (a push event has no PR title) falls back to the head subject.
   const title =
-    titleIndex > -1 ? process.argv[titleIndex + 1] : git(['log', '-1', '--format=%s', head], repo);
+    (titleIndex > -1 && process.argv[titleIndex + 1]) || git(['log', '-1', '--format=%s', head], repo);
   if (!base || !head) {
     console.error('usage: proven-red.mjs <base> <head> [--title "<title>"]');
     process.exit(2);

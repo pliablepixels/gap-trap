@@ -37,27 +37,43 @@ easy parts", or offer a lighter version.
 1. **Discover.** Follow `reference/discovery.md`. It produces a plan
    file in your scratch directory: stack, commands, CI provider,
    existing instruction files, contract candidates with real symbol
-   names, and the first domain facts from history.
+   names, and the first domain facts from history (the revert probe
+   runs at any commit count).
 2. **Confirm once.** Show the plan as a short list: the contracts you
    will write (at most six), the gates you will add, the test and lint
-   commands you found, and where slop-mop goes. Ask one round of
-   questions, only about what discovery could not settle. Then proceed.
+   commands you found, and where slop-mop goes. A build, type check, or
+   lint that is already red is the first item: setup fixes only what
+   its own gate files need (a missing type package, a lockfile) and
+   records the rest as a ratchet count or an out-of-scope entry. Ask one
+   round of questions, only about what discovery could not settle. Then
+   proceed.
 3. **Install slop-mop.** `git clone https://github.com/pliablepixels/slop-mop.git`
    into your scratch directory and copy `slop-mop/slop-mop` to
    `~/.claude/skills/slop-mop` (skip if present). It is not vendored into
    the repo; the project rule in `AGENTS.project.md` requires it.
-4. **Write the instruction files** from `templates/`. `AGENTS.md` is
-   copied unchanged. `AGENTS.project.md`, `CLAUDE.md`, and
-   `agents/` are filled from the plan. Contracts name real symbols only.
-   An existing `AGENTS.md`, `CLAUDE.md`, or `.cursorrules` is not
-   deleted: its rules move into the project rules section, and the user
-   sees the diff.
+4. **Write the instruction files** from `templates/`. `AGENTS.md` and
+   `agents/generic/claude-workflows.md` are copied unchanged, with one
+   exception: a rule whose gate cannot exist in this repo (I3's
+   accessibility lint and C3's locales in a repo with no UI) gets its
+   `Gate:` clause replaced by `Gate: n/a, no <thing> in this repo`.
+   Nothing else in `AGENTS.md` changes. `AGENTS.project.md`,
+   `CLAUDE.md`, and `agents/project/` are filled from the plan; drop the
+   UI and end-to-end lines and `{{E2E_CMD}}` when the repo has no UI, and
+   delete every placeholder you cannot fill with a verified value.
+   Contracts name real symbols only. An existing `AGENTS.md`,
+   `CLAUDE.md`, or `.cursorrules` is not deleted: its rules move into
+   the project rules section, and the user sees the diff.
 5. **Write the gates** from `reference/gates.md`, in the repo's own test
-   runner and CI provider: the instruction gate, proven red, the PR
-   acceptance check, and a ratchet if a linter has a backlog. The stack
-   table there picks the reference: native ports for Node and Python,
-   shell references that need only git, grep, and awk for every other
-   language.
+   runner and CI provider: the instruction gate, proven red, the PR body
+   check, the ratchet (always, seeded with the counters the repo
+   supports: files over the C2 length, lint problems per rule when a
+   linter runs, each contract Never clause that has violations today),
+   and the mutation smoke when discovery named a risky module (auth, a
+   parser, the API client); otherwise refine adds it after the first
+   fix chain. The stack table there picks the reference: native ports
+   for Node and Python, shell references that need only git, grep, and
+   awk for every other language. Set the instruction gate's word budget
+   at the current count plus half, rounded up to the next 500.
 6. **Prove each gate red** with a scratch violation, remove the
    violation, run the repo's full test command, and commit one logical
    change per commit. Do not push unless asked.

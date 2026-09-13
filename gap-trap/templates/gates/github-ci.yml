@@ -7,7 +7,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main]            # ADAPT: the default branch
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,27 +24,12 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.type != 'Bot'
     steps:
+      - uses: actions/checkout@v4
       - name: PR body has acceptance lines, and a spec on a feat
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          section() {
-            printf '%s' "$PR_BODY" | awk -v h="$1" '$0 ~ "^##[[:space:]]*"h {f=1;next} /^##[[:space:]]/{f=0} f' | perl -0pe 's/<!--.*?-->//gs' | tr -d '[:space:]'
-          }
-          if [ -z "$(section Acceptance)" ]; then
-            echo "::error title=No acceptance lines::This PR body has no '## Acceptance' section with content (AGENTS.md P1)."
-            exit 1
-          fi
-          case "$PR_TITLE" in
-            feat*)
-              if [ -z "$(section Spec)" ]; then
-                echo "::error title=No spec::A feat PR needs a '## Spec' section: a link to its spec, or one line saying why this feature needs none."
-                exit 1
-              fi
-              ;;
-          esac
-          echo "PR body sections present."
+        run: sh scripts/pr-body-check.sh
 
   gates:
     runs-on: ubuntu-latest
@@ -74,11 +59,12 @@ jobs:
       # P2 by machine: the tests this range changed must fail on the code
       # the range replaces. Then the mutation smoke proves existing tests
       # can fail at all.
+      # The title goes through env, never into the script text: it is
+      # attacker-controlled on a fork PR.
       - name: Changed tests go red on the pre-change code
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            node scripts/proven-red.mjs "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" --title "${{ github.event.pull_request.title }}"
-          else
-            node scripts/proven-red.mjs "${{ github.event.before }}" "${{ github.event.after }}"
-          fi
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.event.after }}
+        run: node scripts/proven-red.mjs "$BASE" "$HEAD" --title "$PR_TITLE"   # ADAPT: sh scripts/proven-red.sh for the shell port
       - run: npm run test:mutation        # ADAPT, or drop until mutation targets exist

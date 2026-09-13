@@ -30,6 +30,10 @@ Record, with the file that proves each:
   line that proves it.
 - Test runner and its single-run command. Lint command(s). Type check.
   Build. One combined "gates" command exists? If not, you will add one.
+  Run each once and record whether it is green today; a red build or
+  lint goes to the top of the confirm step.
+- Node: a committed lockfile (`npm ci` in CI needs one) and `@types/node`
+  when the gate file will import `node:*` under a strict type check.
 - CI provider and workflow files. Branch protection (`gh api
   repos/{owner}/{repo}/branches/{default}/protection` when `gh` works).
   Pre-commit hooks (husky, pre-commit, lefthook).
@@ -38,12 +42,15 @@ Record, with the file that proves each:
   kept, not replaced.
 - Docs: user docs, developer docs, ADRs, and where they live.
 
-## 2. History probes (skip if fewer than 50 commits)
+## 2. History probes
 
-Count with `git rev-list --count HEAD`, never a piped `wc`.
+Count with `git rev-list --count HEAD`, never a piped `wc`. The revert
+probe runs at any commit count; the fix-chain and churn statistics need
+about 50 commits to mean anything.
 
 - Reverts: `git log --grep=revert -i --oneline`. Each is a paid
-  experiment; the lesson is what not to retry.
+  experiment; the lesson is what not to retry, and its subject line is
+  the first `domain-context.md` entry even in a six-commit repo.
 - Fix chains: `git log --format=%s | grep -oE '^fix\(([^)]+)\)' | sort |
   uniq -c | sort -rn`. A scope with many fixes is one misunderstanding
   coming back.
