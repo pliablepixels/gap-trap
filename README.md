@@ -4,12 +4,17 @@ Turns vibe coding into high quality code.
 
 ## The problem
 
-You let an AI agent write your code. It is fast, so you stop reading
-every diff. Then quality drifts. The agent calls the network directly
-instead of using your HTTP wrapper. It logs a token. It writes a test
-that passes without checking anything.
+An agent writes most of your code. It is fast, so you stop reading
+every diff. Quality drifts, and you find out when something breaks.
 
-Nothing stops it. Your rules live in a file the agent can ignore.
+The drift looks the same in every codebase. The agent writes a helper
+that already exists. It crosses a layer boundary because the shortcut
+compiled. It writes a test that asserts the code ran, not that it did
+the right thing. It follows a rule in your instructions file for a
+week and then forgets it.
+
+Nothing stops any of this. The rules are text, and the only thing that
+reads them is the agent that breaks them.
 
 ## What gap-trap does
 
