@@ -54,7 +54,10 @@ easy parts", or offer a lighter version.
    sees the diff.
 5. **Write the gates** from `reference/gates.md`, in the repo's own test
    runner and CI provider: the instruction gate, proven red, the PR
-   acceptance check, and a ratchet if a linter has a backlog.
+   acceptance check, and a ratchet if a linter has a backlog. The stack
+   table there picks the reference: native ports for Node and Python,
+   shell references that need only git, grep, and awk for every other
+   language.
 6. **Prove each gate red** with a scratch violation, remove the
    violation, run the repo's full test command, and commit one logical
    change per commit. Do not push unless asked.

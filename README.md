@@ -9,7 +9,7 @@ The framework comes from [zmNinjaNg](https://github.com/ZoneMinder/zmNinjaNg), w
 - `AGENTS.md`, the rules that apply to any project. Each rule has an ID, a one-clause reason, and the gate that enforces it. Copied unchanged, and a test keeps project names out of it.
 - `AGENTS.project.md`, the contracts for your codebase. A contract is four lines for one subsystem: what it owns, the one sanctioned way to use it, the bypasses that count as bugs even when they work, and the gate that catches them. The skill finds candidates by looking for wrappers with bypasses, modules everything imports, and the scopes your fix commits keep returning to.
 - `agents/`, playbooks that load only for work in their area: testing, documentation, a glossary, declined requests, and a domain file for the facts the project paid for.
-- Gates, written in your own test runner: a test over the instruction files themselves, a proven-red job that runs each change's tests against the pre-change code, a ratchet for counts that may fall but never grow, and a PR body check.
+- Gates, in your own test runner or as shell scripts for any language: a test over the instruction files themselves, a proven-red job that runs each change's tests against the pre-change code, a ratchet for counts that may fall but never grow, and a PR body check.
 - A self-improvement protocol: when something breaks that a rule would have caught, the fix PR also proposes the rule and its gate. The `refine` mode is the periodic sweep for what nobody wrote down at the time.
 
 The instruction files are written for agents, not people: short statements with IDs and gate names. The human-readable explanation stays in your docs.
@@ -67,7 +67,7 @@ gap-trap/
     pull_request_template.md
 ```
 
-The gate references are Node and vitest because the origin is. The skill ports the spec to your test runner and keeps the same assertions.
+The gates come in three forms: vitest and pytest ports that run inside the test suite for Node and Python repos, and shell versions that need only git, grep, awk, and your test command for everything else (Go, Rust, Java, Ruby, .NET, PHP, Swift, C++). The shell versions were run against a Go repo and the origin TypeScript repo. The skill picks by manifest and keeps the same assertions whichever form it uses.
 
 ## License
 

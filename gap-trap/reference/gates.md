@@ -1,10 +1,34 @@
 # Gates
 
-Each gate below has a spec and a reference implementation under
-`templates/gates/`. The references are Node and vitest because the
-origin repo is; port the spec to the repo's own test runner and keep the
-same assertions and failure messages. One reference is enough to port
-from. Every gate is proven red with a scratch violation before it lands.
+Each gate below has a spec and reference implementations under
+`templates/gates/`. Pick by stack:
+
+| Stack | Instruction gate | Proven red | Ratchet |
+|---|---|---|---|
+| Node (vitest/jest) | `instruction-gate.test.ts` | `proven-red.mjs` | `ratchet.mjs` |
+| Python (pytest) | `instruction_gate_test.py` | `proven-red.sh` with `python -m pytest "$@"` | `ratchet.sh` |
+| Go, Rust, Java, Ruby, .NET, PHP, Swift, C++, anything else | `instruction-gate.sh` as a CI step and pre-commit hook, or a port into the runner | `proven-red.sh` with the runner in `run_tests` | `ratchet.sh` |
+
+The `.sh` references need only git, grep, awk, and the repo's test
+command, and were run against a Go repo and the origin TypeScript repo.
+A native port into the runner is better when one is cheap (the gate then
+runs with `npm test` or `pytest` and nobody forgets it); the shell gate
+is the fallback that always works. Keep the same assertions and failure
+messages whichever you pick. Every gate is proven red with a scratch
+violation before it lands.
+
+Unit test file patterns by stack, for the proven-red classifier and the
+test-dir exemptions:
+
+| Stack | Unit test files | Runs a subset by |
+|---|---|---|
+| Node | `*.test.ts`, `*.spec.ts`, `__tests__/` | file paths |
+| Python | `test_*.py`, `*_test.py`, `tests/` | file paths |
+| Go | `*_test.go` beside the source | package dirs (`go test ./pkg`) |
+| Rust | `#[cfg(test)]` in source, `tests/*.rs` | `cargo test <name>`; whole crate is fine |
+| Java/Kotlin | `*Test.java` under `src/test` | `-Dtest=Class` (Maven), `--tests` (Gradle) |
+| Ruby | `*_spec.rb`, `spec/` | file paths |
+| .NET | `*Tests.cs` | `--filter` |
 
 ## Instruction gate
 
@@ -32,7 +56,10 @@ Spec (one test file, runs with the unit tests):
    the number when the tree is clean today; a ratchet count when it is
    not.
 
-Reference: `templates/gates/instruction-gate.test.ts`.
+References: `templates/gates/instruction-gate.test.ts` (vitest),
+`templates/gates/instruction_gate_test.py` (pytest),
+`templates/gates/instruction-gate.sh` (any stack; config through `GT_*`
+environment variables or the block at the top).
 
 ## Proven red
 
@@ -46,9 +73,11 @@ function`, `Cannot find module`) apart, print both, warn when every
 failure is a missing reference. Repo-hygiene tests (the instruction
 gate) are exempt: they are proven red by scratch violation.
 
-Reference: `templates/gates/proven-red.mjs`. Adapt the three regexes
-(unit test, test support, non-code) and the test command. CI job:
-`templates/gates/github-ci.yml`.
+References: `templates/gates/proven-red.mjs` (Node, reads the vitest
+JSON report) and `templates/gates/proven-red.sh` (any stack, reads the
+runner's text output with a cross-language missing-symbol pattern).
+Adapt the three classifiers (unit test, test support, non-code) and the
+`run_tests` command. CI job: `templates/gates/github-ci.yml`.
 
 ## Ratchet
 
@@ -63,7 +92,9 @@ that only prove existence, files over a length limit (the linter's
 max-lines rule feeds the lint ratchet with no new code), fixed sleeps in
 end-to-end steps.
 
-Reference: `templates/gates/ratchet.mjs`.
+References: `templates/gates/ratchet.mjs` (Node) and
+`templates/gates/ratchet.sh` (any stack: counters are shell one-liners in
+`.ratchet-counters`, the baseline is a text file).
 
 ## PR body check
 
@@ -73,6 +104,11 @@ when `## Spec` has no content. The template is
 `templates/pull_request_template.md`.
 
 Reference: the `pr-acceptance` job in `templates/gates/github-ci.yml`.
+On GitLab the same shell reads `CI_MERGE_REQUEST_DESCRIPTION` and
+`CI_MERGE_REQUEST_TITLE` in a `rules: - if: $CI_MERGE_REQUEST_IID` job.
+The three CI jobs (gates, proven red, PR body) map one to one onto any
+provider; only the checkout depth (full history for the hash check) and
+the toolchain setup step change.
 
 ## Mutation smoke
 
@@ -81,8 +117,9 @@ Spec: a list of `{file, from, to, tests}`; for each, replace `from` with
 run failed. Start with three or four risky modules (auth, the API
 client, a parser). Runs in CI, about two seconds per target.
 
-Reference: the pattern is short enough to write from the spec; see
-`app/scripts/mutation-smoke.mjs` in zmNinjaNg for one.
+Reference: the pattern is short enough to write from the spec in any
+language (`sed -i` the mutation, run the tests, `git checkout` the file
+in a trap); see `app/scripts/mutation-smoke.mjs` in zmNinjaNg for one.
 
 ## Combined gate command
 

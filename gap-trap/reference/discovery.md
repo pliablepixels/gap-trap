@@ -9,8 +9,25 @@ symbol name; grep it.
 Record, with the file that proves each:
 
 - Languages and the primary one (by file count under the source dirs).
-- Package manager and the working directory npm/pip/cargo/go commands
-  run from (a monorepo may have several; pick the one agents will edit).
+- Package manager and the working directory the commands run from (a
+  monorepo may have several; pick the one agents will edit). The
+  manifest names the stack:
+
+  | Manifest | Stack | Test | Lint / vet | Type or build |
+  |---|---|---|---|---|
+  | `package.json` | Node | `npm test` (vitest, jest) | `eslint .` | `tsc --noEmit` |
+  | `pyproject.toml`, `setup.py`, `requirements.txt` | Python | `pytest` | `ruff check .` | `mypy` |
+  | `go.mod` | Go | `go test ./...` | `go vet ./...`, `golangci-lint run` | `go build ./...` |
+  | `Cargo.toml` | Rust | `cargo test` | `cargo clippy` | `cargo build` |
+  | `pom.xml`, `build.gradle*` | Java, Kotlin | `mvn test`, `gradle test` | checkstyle, detekt | compile step |
+  | `Gemfile` | Ruby | `rspec` | `rubocop` | none |
+  | `*.csproj`, `*.sln` | .NET | `dotnet test` | analyzers | `dotnet build` |
+  | `composer.json` | PHP | `phpunit` | `phpstan` | none |
+  | `Package.swift` | Swift | `swift test` | swiftlint | `swift build` |
+  | `CMakeLists.txt`, `Makefile` | C, C++ | `ctest` | clang-tidy | build |
+
+  Confirm each command by running it once; the plan records the output
+  line that proves it.
 - Test runner and its single-run command. Lint command(s). Type check.
   Build. One combined "gates" command exists? If not, you will add one.
 - CI provider and workflow files. Branch protection (`gh api
@@ -41,11 +58,19 @@ hashes behind it) and candidate contracts (a recurring class).
 
 A contract exists where the code has one sanctioned path. Find them:
 
-- **Wrappers with bypasses.** A module that wraps a platform API
-  (`http.ts` over `fetch`, `logger.ts` over `console`, `settings.ts` over
-  storage, `db.py` over the driver) and raw uses of the same API
-  elsewhere. Grep the raw API, list the files. The wrapper is the Path,
-  the raw uses are today's violations, and the grep is the gate.
+- **Wrappers with bypasses.** A module that wraps a platform API and
+  raw uses of the same API elsewhere. Grep the raw API, list the files.
+  The wrapper is the Path, the raw uses are today's violations, and the
+  grep is the gate. What to grep for by concern:
+
+  | Concern | Raw API to grep | Wrapper looks like |
+  |---|---|---|
+  | HTTP | `fetch(`, `axios`, `requests.`, `httpx.`, `http.Get`, `http.NewRequest`, `reqwest::`, `HttpClient` | `lib/http`, `httpx/client.go`, `net/client.rs` |
+  | Logging | `console.`, `print(`, `fmt.Print`, `log.Print`, `println!`, `System.out` | `logger`, `logx`, `tracing` setup |
+  | Settings, env | `localStorage`, `os.environ`, `os.Getenv`, `env::var`, `System.getenv` | `settings`, `config` |
+  | Database | driver calls (`cursor.execute`, `sql.Open`, `db.Query`, `sqlx::query`) outside a repository layer | `repo/`, `store/`, `dao/` |
+  | Auth, secrets | token strings in URLs or logs, `Authorization:` built by hand | one token helper |
+  | Time, sleep | `time.sleep`, `time.Sleep`, `setTimeout` in tests | a clock or an awaited condition |
 - **Fan-in modules.** Modules imported from many places (count
   importers). Each is a concern something owns.
 - **Security paths.** Token storage, auth refresh, secrets in logs or

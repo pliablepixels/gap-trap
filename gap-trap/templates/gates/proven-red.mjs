@@ -32,7 +32,7 @@
  * assertions still need a look (M2: read what a gate measured).
  */
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -124,11 +124,18 @@ export function proveRed({ base, head, repo, title, runTests = runVitest, log = 
   const worktree = mkdtempSync(path.join(tmpdir(), 'proven-red-'));
   try {
     git(['worktree', 'add', '--detach', '-q', worktree, forkPoint], repo);
+    // Read the head versions from git, not the working tree: locally the
+    // checkout may be on another branch, and a test copied from there
+    // proves nothing. CI checks out head, so the two agree there.
     for (const f of [...split.unitTests, ...split.testSupport]) {
-      const from = path.join(repo, f);
-      if (!existsSync(from)) continue; // deleted at head
+      let content;
+      try {
+        content = execFileSync('git', ['show', `${head}:${f}`], { cwd: repo, encoding: 'utf8' });
+      } catch {
+        continue; // deleted at head
+      }
       mkdirSync(path.dirname(path.join(worktree, f)), { recursive: true });
-      cpSync(from, path.join(worktree, f));
+      writeFileSync(path.join(worktree, f), content);
     }
     // ADAPT: share installed dependencies with the worktree instead of reinstalling.
     const modules = path.join(repo, APP_DIR, 'node_modules');
