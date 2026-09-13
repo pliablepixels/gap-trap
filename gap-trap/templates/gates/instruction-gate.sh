@@ -16,14 +16,18 @@ SOURCE_EXT=${GT_SOURCE_EXT:-'\.(go|py|rs|ts|tsx|js|java|kt|rb|swift|cs|php)$'}
 TEST_PATH_RE=${GT_TEST_PATH_RE:-'(^|/)(__tests__|tests?|spec)(/|$)|_test\.|\.test\.|^test_|Test\.'}
 FORBIDDEN_IN_CORE=${GT_FORBIDDEN_IN_CORE:-'{{PRODUCT}} {{FRAMEWORK}} agents/project'}  # ADAPT
 WORD_BUDGET=${GT_WORD_BUDGET:-4000}         # ADAPT: current count plus room (C7)
-MIN_CONTRACTS=${GT_MIN_CONTRACTS:-3}
+MIN_CONTRACTS=${GT_MIN_CONTRACTS:-2}       # the honest count; never pad
 KNOWLEDGE_FILES='agents/project/domain-context.md agents/project/glossary.md agents/project/out-of-scope.md agents/generic/claude-workflows.md'
 DOCS_DIR=${GT_DOCS_DIR:-docs}               # ADAPT: '' skips the rule-ID check
-# ADAPT: one grep gate per line: name|ERE over source lines|ERE over relative paths to exempt
-GREP_GATES='
-Logging: no raw print or console outside the logger|\bconsole\.[a-z]+\(|\bfmt\.Print|\bprint\(|^lib/log
-HTTP: no raw HTTP client outside the wrapper|[^.A-Za-z_]fetch\(|\bhttp\.(Get|Post|NewRequest)\(|\brequests\.(get|post)\(|^lib/http
-'
+# ADAPT: one grep gate per printf row: name, ERE over source lines, ERE over
+# relative paths to exempt. Fields are tab-separated so patterns may use `|`.
+# Only clauses that are clean today belong here; a clause with violations
+# goes into .ratchet-counters as a count (gates.md, instruction gate item 8).
+TAB=$(printf '\t')
+GREP_GATES=$(printf '%s\t%s\t%s\n' \
+  'Logging: no raw print or console outside the logger' '\bconsole\.[a-z]+\(|\bfmt\.Print|\blog\.Print|\bprint\(' '^lib/log|^logx/' \
+  'HTTP: no raw HTTP client outside the wrapper' '[^.A-Za-z_]fetch\(|\bhttp\.(Get|Post|NewRequest|DefaultClient)\b|\brequests\.(get|post)\(' '^lib/http|^httpx/' \
+)
 # ---- end config -----------------------------------------------------------
 
 fail=0
@@ -44,7 +48,7 @@ printf '%s\n' "$names" | while IFS= read -r name; do
   printf '%s\n' "$block" | grep -E '^(Path|Gate):' | grep -o '`[^`]*`' | tr -d '`' | sed 's/()$//' | sort -u | while IFS= read -r token; do
     case "$token" in
       */*) [ -e "$token" ] || echo "FAIL: $name: path $token missing" ;;
-      *) grep -rqw --exclude-dir=node_modules --exclude-dir=.git -- "$token" "$SRC_DIR" || echo "FAIL: $name: symbol $token not found in $SRC_DIR" ;;
+      *) grep -rqw --exclude-dir=node_modules --exclude-dir=.git -- "$token" "$SRC_DIR" 2>/dev/null || echo "FAIL: $name: symbol $token not found in $SRC_DIR" ;;
     esac
   done
 done | tee /tmp/gt-contracts.$$ ; grep -q FAIL /tmp/gt-contracts.$$ && fail=1; rm -f /tmp/gt-contracts.$$
@@ -60,7 +64,9 @@ words=$(cat AGENTS.md AGENTS.project.md CLAUDE.md 2>/dev/null | wc -w | tr -d ' 
 
 # 5. cited hashes exist
 if [ -f agents/project/domain-context.md ]; then
-  for h in $(grep -oE '\b[0-9a-f]{8}\b' agents/project/domain-context.md | sort -u); do
+  # 7 to 40 hex chars with at least one digit: --oneline prints 7, and the
+  # digit keeps English words made of a-f (acceded, defaced) out.
+  for h in $(grep -oE '\b[0-9a-f]{7,40}\b' agents/project/domain-context.md | grep '[0-9]' | sort -u); do
     git cat-file -e "$h^{commit}" 2>/dev/null || bad "cited commit $h not found in history"
   done
 fi
@@ -81,9 +87,10 @@ if [ -n "$DOCS_DIR" ] && [ -d "$DOCS_DIR" ]; then
 fi
 
 # 8. grep gates over non-test source, comment lines dropped
-files=$(git ls-files "$SRC_DIR" | grep -E "$SOURCE_EXT" | grep -vE "$TEST_PATH_RE")
+[ -d "$SRC_DIR" ] || bad "SRC_DIR $SRC_DIR does not exist"
+files=$(git ls-files "$SRC_DIR" 2>/dev/null | grep -E "$SOURCE_EXT" | grep -vE "$TEST_PATH_RE")
 [ "$(printf '%s\n' "$files" | grep -c .)" -gt 0 ] || bad "grep gates scanned no source files under $SRC_DIR (M2)"
-printf '%s\n' "$GREP_GATES" | grep -v '^$' | while IFS='|' read -r name pattern exempt; do
+printf '%s\n' "$GREP_GATES" | grep -v '^$' | while IFS="$TAB" read -r name pattern exempt; do
   hits=''
   for f in $files; do
     rel=${f#"$SRC_DIR"/}

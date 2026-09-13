@@ -21,7 +21,7 @@ SOURCE_EXT = (".py",)
 TEST_DIRS = {"tests", "test", "__tests__"}
 FORBIDDEN_IN_CORE = ["{{PRODUCT}}", "{{FRAMEWORK}}", SRC_DIR, "agents/project"]  # ADAPT
 WORD_BUDGET = 4000                                  # ADAPT: current count plus room (C7)
-MIN_CONTRACTS = 3
+MIN_CONTRACTS = 2  # the honest count; never pad
 KNOWLEDGE_FILES = [
     "agents/project/domain-context.md",
     "agents/project/glossary.md",
@@ -94,7 +94,9 @@ def test_always_loaded_files_within_word_budget():
 
 def test_cited_commit_hashes_exist():
     md = read(REPO / "agents/project/domain-context.md")
-    for h in sorted(set(re.findall(r"\b[0-9a-f]{8}\b", md))):
+    # 7 to 40 hex chars with a digit: --oneline prints 7, and the digit keeps
+    # English words made of a-f (acceded, defaced) out.
+    for h in sorted({h for h in re.findall(r"\b[0-9a-f]{7,40}\b", md) if re.search(r"\d", h)}):
         r = subprocess.run(["git", "cat-file", "-e", f"{h}^{{commit}}"], cwd=REPO, capture_output=True)
         assert r.returncode == 0, f"cited commit {h} not found in history"
 

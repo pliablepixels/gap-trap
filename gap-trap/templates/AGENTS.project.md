@@ -13,11 +13,11 @@ only; the instruction gate greps every backticked token in Path and Gate.
 Owns: {{what this subsystem owns}}.
 Path: `{{sanctionedSymbol}}` (`{{path/to/module}}`).
 Never: {{the bypasses that count as bugs even when they work}}.
-Gate: `{{path/to/instruction-gate.test}}` ({{what it greps}}); review for the rest.
+Gate: `{{path/to/instruction-gate}}` ({{what it greps}}); the ratchet holds {{counter name}}; review for the rest.
 
 ## Project rules
 
-- Run commands from `{{WORKDIR}}`.
+- Run commands from `{{WORKDIR}}`. Run `{{HOOK_INSTALL}}` once per clone so the pre-commit gates exist.
 - Prose people read (docs, commit bodies, PR and issue bodies, review
   comments) is written with the slop-mop skill; prose reviews run its
   detect mode on Opus or newer.

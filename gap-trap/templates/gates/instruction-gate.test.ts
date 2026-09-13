@@ -25,7 +25,7 @@ const TEST_DIRS = ['__tests__', 'tests'];
 const FORBIDDEN_IN_CORE = ['{{PRODUCT}}', '{{FRAMEWORK}}', SRC_DIR, 'agents/project'];
 /** ADAPT: current count plus room. Raising it needs a reason in the commit message (C7). */
 const WORD_BUDGET = 4000;
-const MIN_CONTRACTS = 3;
+const MIN_CONTRACTS = 2; // the honest count; never pad
 const KNOWLEDGE_FILES = [
   'agents/project/domain-context.md',
   'agents/project/glossary.md',
@@ -124,7 +124,9 @@ describe('AGENTS.md stays portable and small', () => {
 describe('knowledge files stay evidence-backed and private-data-free (M5)', () => {
   it('every commit hash cited in domain-context exists in this repo', () => {
     const md = read(path.join(repoRoot, 'agents/project/domain-context.md'));
-    const hashes = [...new Set([...md.matchAll(/\b[0-9a-f]{8}\b/g)].map((m) => m[0]))];
+    // 7 to 40 hex chars with a digit: --oneline prints 7, and the digit keeps
+    // English words made of a-f (acceded, defaced) out.
+    const hashes = [...new Set([...md.matchAll(/\b[0-9a-f]{7,40}\b/g)].map((m) => m[0]).filter((h) => /\d/.test(h)))];
     for (const hash of hashes) {
       expect(
         () => execSync(`git cat-file -e ${hash}^{commit}`, { cwd: repoRoot, stdio: 'pipe' }),

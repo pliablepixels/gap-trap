@@ -16,8 +16,8 @@ set -u
 APP_DIR=${GT_APP_DIR:-.}                            # ADAPT: where the test command runs
 # ADAPT: which changed paths are unit tests, test support (travels along, not proven), non-code.
 UNIT_TEST_RE=${GT_UNIT_TEST_RE:-'(_test\.go|_test\.py|/test_[^/]+\.py|\.test\.[jt]sx?|_spec\.rb|Test\.java|Tests?\.cs|_test\.rs)$'}
-TEST_SUPPORT_RE=${GT_TEST_SUPPORT_RE:-'(^|/)(tests?|__tests__|spec|testdata|fixtures)/|conftest\.py$|/setup\.(ts|js)$'}
-NON_CODE_RE=${GT_NON_CODE_RE:-'^(docs/|agents/|\.github/|.*\.(md|rst|txt)$|.*baseline.*\.json$)'}
+TEST_SUPPORT_RE=${GT_TEST_SUPPORT_RE:-'(^|/)(tests?|__tests__|spec|testdata|fixtures)/|conftest\.py$|/setup\.(ts|js)$|^scripts/'}
+NON_CODE_RE=${GT_NON_CODE_RE:-'^(docs/|agents/|\.github/|\.githooks/|Makefile$|\.ratchet-|.*\.(md|rst|txt|yml|yaml)$|.*baseline.*\.json$)'}
 SKIP_TYPES='docs chore ci refactor build style test'
 # ADAPT: run only the given test files. Go tests run by package, so map files to dirs.
 run_tests() {   # $@ = changed unit test paths relative to APP_DIR

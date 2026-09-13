@@ -11,6 +11,10 @@ Each gate below has a spec and reference implementations under
 
 The `.sh` references need only git, grep, awk, and the repo's test
 command, and were run against a Go repo and the origin TypeScript repo.
+`github-ci.yml` is written for Node; on another stack replace the
+setup-node and `npm` steps with the toolchain's (`actions/setup-go`,
+`actions/setup-python`, `dtolnay/rust-toolchain`) and call the `.sh`
+gates through the Makefile.
 A native port into the runner is better when one is cheap (the gate then
 runs with `npm test` or `pytest` and nobody forgets it); the shell gate
 is the fallback that always works. Keep the same assertions and failure
@@ -32,7 +36,13 @@ test-dir exemptions:
 
 ## Instruction gate
 
-Spec (one test file, runs with the unit tests):
+Spec (one test file, runs with the unit tests). In `Path:` and `Gate:`
+lines, backtick only what the gate can look up: a file path (contains
+`/`) or a bare symbol found as a whole word in the source tree. A
+counter name, a dotted call such as `log.Print`, or a flag goes
+unquoted. The minimum contract count is the honest number, two is
+fine; never pad. Cite commit hashes with at least 7 characters (`git
+log --oneline` prints 7) and the gate resolves them.
 
 1. `AGENTS.project.md` has at least N contracts and each has `Owns:`,
    `Path:`, `Never:`, `Gate:` lines.
@@ -131,11 +141,25 @@ Reference: the pattern is short enough to write from the spec in any
 language (`sed -i` the mutation, run the tests, `git checkout` the file
 in a trap); see `app/scripts/mutation-smoke.mjs` in zmNinjaNg for one.
 
-## Combined gate command
+## Combined gate command and hooks
 
-Add one command that runs the unit tests, the build or type check, and
-the blocking lints, so P3 has a name to cite. Cost it: the origin repo's
-runs in about a minute locally.
+Add one command that runs the unit tests, the build or type check, the
+blocking lints, the instruction gate, and the ratchet, so P3 has a name
+to cite: `npm run gates` on Node, a `gates` target in a `Makefile`
+everywhere else (Python, Go, Rust, Java all read a Makefile). Cost it:
+the origin repo's runs in about a minute locally.
+
+Pre-commit: Node repos use husky; every other stack gets a versioned
+`.githooks/pre-commit` that runs the instruction gate and the ratchet,
+enabled once per clone with `git config core.hooksPath .githooks`. The
+project rules name that command so an agent runs it on a fresh clone.
+CI re-runs the same gates, so a skipped hook changes nothing that
+merges.
+
+No CI provider yet: write the GitHub Actions workflow when the remote is
+GitHub or there is no remote (it is the reference and costs nothing
+unused), and say in the report that no CI runs until the repo is
+pushed there. A GitLab remote gets the three jobs as `.gitlab-ci.yml`.
 
 ## What not to add
 
