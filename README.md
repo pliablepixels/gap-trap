@@ -2,7 +2,9 @@
 
 Turns vibe coding into high quality code. gap-trap is a skill for coding agents that sets up rules and gates in your repository, so the code an AI writes stays correct without you reviewing every line. A rule the agent can skip is a suggestion; a rule with a gate fails the commit, the push, or the CI run. gap-trap finds the places in your code that need a rule, writes the rules, and adds the gates: contracts for the parts of the code that have one right way to do things, a CI check that proves each new test can fail, counts that may fall but never grow, and playbooks that hold what the project has learned. It also installs [slop-mop](https://github.com/pliablepixels/slop-mop) for the prose.
 
-The framework comes from [zmNinjaNg](https://github.com/ZoneMinder/zmNinjaNg), where agents write most of the code and no one reads the diffs line by line. Chapter 14 of its [developer guide](https://github.com/ZoneMinder/zmNinjaNg/blob/main/docs/developer-guide/14-agent-development-model.rst) describes the model and the evidence behind it. gap-trap is that model made portable.
+## Where it comes from
+
+The framework is the one [zmNinjaNg](https://github.com/ZoneMinder/zmNinjaNg) runs on, where agents write most of the code and no one reads the diffs line by line. The inspiration and the evidence are in chapter 14 of its developer guide, [Agent development model](https://zmninjang.readthedocs.io/en/latest/developer-guide/14-agent-development-model.html): what a rule, a contract, and a gate are, how one feature goes from spec to merge, which gates caught what, and the numbers behind it (2,900 commits in nine months, fourteen reverts). gap-trap is that model made portable.
 
 ## What you get
 
