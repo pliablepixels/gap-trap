@@ -14,7 +14,9 @@ that names no gate is a defect. The framework is the one described in
 Two modes: `setup` builds the framework in a repo that has none.
 `refine` audits a repo that has it and proposes the next rules and gates
 from what broke. Bare `gap-trap` with no keyword means `setup` when the
-repo has no `AGENTS.md`, otherwise `refine`.
+repo has no `AGENTS.project.md`, otherwise `refine`. A hand-written
+`AGENTS.md` or `CLAUDE.md` on its own is input to setup, not a sign the
+framework exists.
 
 ## Model gate
 
@@ -36,12 +38,14 @@ easy parts", or offer a lighter version.
 
 1. **Discover.** Follow `reference/discovery.md`. It produces a plan
    file in your scratch directory: stack, commands, CI provider,
-   existing instruction files, contract candidates with real symbol
-   names, and the first domain facts from history (the revert probe
-   runs at any commit count).
+   contract candidates with real symbol names, the first domain facts
+   from history (the revert probe runs at any commit count), and one
+   row per rule found in an existing instruction file with where it
+   goes and what gates it.
 2. **Confirm once.** Show the plan as a short list: the contracts you
    will write (at most six), the gates you will add, the test and lint
-   commands you found, and where slop-mop goes. A build, type check, or
+   commands you found, the migrated-rules table, and where slop-mop
+   goes. A build, type check, or
    lint that is already red is the first item: setup fixes only what
    its own gate files need (a missing type package, a lockfile) and
    records the rest as a ratchet count or an out-of-scope entry. Ask one
@@ -60,9 +64,17 @@ easy parts", or offer a lighter version.
    `CLAUDE.md`, and `agents/project/` are filled from the plan; drop the
    UI and end-to-end lines and `{{E2E_CMD}}` when the repo has no UI, and
    delete every placeholder you cannot fill with a verified value.
-   Contracts name real symbols only. An existing `AGENTS.md`,
-   `CLAUDE.md`, or `.cursorrules` is not deleted: its rules move into
-   the project rules section, and the user sees the diff.
+   Contracts name real symbols only. Existing instruction files
+   (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`,
+   `.github/copilot-instructions.md`, `CONTRIBUTING.md`) are migrated
+   from the plan's migrated-rules table, one row at a time: a contract
+   row becomes a contract block, a rule row becomes a project rule with
+   its gate name or `Gate: review`, a playbook row goes verbatim into
+   the named `agents/project/` file, a command row fills the
+   verification block, and a duplicate or dropped row is left out. No
+   rule is dropped silently; the confirm step showed the table. The
+   old file is replaced by the template that owns its name, and
+   `CONTRIBUTING.md` stays where it is. The user sees the diff.
 5. **Write the gates** from `reference/gates.md`, in the repo's own test
    runner and CI provider: the instruction gate, proven red, the PR body
    check, the ratchet (always, seeded with the counters the repo

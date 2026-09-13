@@ -38,8 +38,8 @@ Record, with the file that proves each:
   repos/{owner}/{repo}/branches/{default}/protection` when `gh` works).
   Pre-commit hooks (husky, pre-commit, lefthook).
 - Existing instruction files: `AGENTS.md`, `CLAUDE.md`, `.cursorrules`,
-  `.github/copilot-instructions.md`, `CONTRIBUTING.md`. Their rules are
-  kept, not replaced.
+  `.github/copilot-instructions.md`, `CONTRIBUTING.md`. Record each
+  path; section 4 sorts their rules.
 - Docs: user docs, developer docs, ADRs, and where they live.
 
 ## 2. History probes
@@ -91,13 +91,38 @@ blast radius. Take at most six for setup. Note which Never clauses a
 text search can settle (those get a grep gate) and which cannot (`Gate:
 review`).
 
-## 4. Gate plan
+## 4. Migrated rules
+
+Skip when section 1 found no instruction file. Otherwise read every
+file found and split it into single rules: one statement, one
+imperative, one fact. A rule that is already a template rule (a G, P,
+C, I, or M line in `templates/AGENTS.md`) is a duplicate. Sort the rest
+by what the codebase confirms:
+
+| Rule says | Disposition | Where it lands |
+|---|---|---|
+| Use X, never Y, for one subsystem, and X exists in the tree | contract | section 3, ranked with the other candidates |
+| A do or do-not with no single owner | project rule | `AGENTS.project.md` project rules, with a gate |
+| A fact about an API, a quirk, a decision, a term | playbook | `agents/project/domain-context.md` or `glossary.md`, verbatim |
+| A test, lint, or build command | command | section 1, if it matches what runs today |
+| Prose about the project, tone, or the reader | dropped | nowhere; list it so the user sees it go |
+
+Every contract and project rule gets a gate the same way refine does:
+grep the Never clause or the rule. Clean today: a zero-tolerance grep
+in the instruction gate. Violations today: a ratchet counter at that
+count. No text search settles it: `Gate: review`. A rule that names a
+path or symbol that no longer exists is reported, not migrated.
+
+Write the table into the plan with the source file and line for each
+row. It goes on the confirm list next to the contracts.
+
+## 5. Gate plan
 
 For each gate in `reference/gates.md`, record: applies here (yes/no and
 why), the file it will live in, the command that runs it, and the
 scratch violation that will prove it red.
 
-## 5. Questions for the user
+## 6. Questions for the user
 
 Only what discovery could not settle: which of two test commands is
 canonical, whether a candidate contract's bypasses are deliberate,
