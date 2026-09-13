@@ -1,0 +1,84 @@
+# Reference CI for the gap-trap gates (GitHub Actions). ADAPT: the install
+# and test commands, the working directory, and the Node setup if the repo
+# is not Node. Make `unit-tests`, `gates`, and `proven-red` required checks
+# in branch protection; a check nobody requires is advice.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # P1: the body quotes the issue's acceptance lines, which the Spec review
+  # axis judges the diff against. A feat PR also names its spec. Fork PRs
+  # and bots are exempt.
+  pr-acceptance:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.type != 'Bot'
+    steps:
+      - name: PR body has acceptance lines, and a spec on a feat
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          section() {
+            printf '%s' "$PR_BODY" | awk -v h="$1" '$0 ~ "^##[[:space:]]*"h {f=1;next} /^##[[:space:]]/{f=0} f' | perl -0pe 's/<!--.*?-->//gs' | tr -d '[:space:]'
+          }
+          if [ -z "$(section Acceptance)" ]; then
+            echo "::error title=No acceptance lines::This PR body has no '## Acceptance' section with content (AGENTS.md P1)."
+            exit 1
+          fi
+          case "$PR_TITLE" in
+            feat*)
+              if [ -z "$(section Spec)" ]; then
+                echo "::error title=No spec::A feat PR needs a '## Spec' section: a link to its spec, or one line saying why this feature needs none."
+                exit 1
+              fi
+              ;;
+          esac
+          echo "PR body sections present."
+
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The instruction gate checks that cited commit hashes exist.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci                       # ADAPT
+      - run: npm run gates                # ADAPT: unit tests, build/type check, blocking lints
+
+  proven-red:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci                       # ADAPT
+      # P2 by machine: the tests this range changed must fail on the code
+      # the range replaces. Then the mutation smoke proves existing tests
+      # can fail at all.
+      - name: Changed tests go red on the pre-change code
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            node scripts/proven-red.mjs "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" --title "${{ github.event.pull_request.title }}"
+          else
+            node scripts/proven-red.mjs "${{ github.event.before }}" "${{ github.event.after }}"
+          fi
+      - run: npm run test:mutation        # ADAPT, or drop until mutation targets exist
