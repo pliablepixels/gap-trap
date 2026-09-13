@@ -37,7 +37,13 @@ gets shell versions that need only git, grep, awk, and your test command.
 
 ## Install
 
-For Claude Code:
+With the [skills](https://github.com/vercel-labs/skills) CLI:
+
+```
+npx skills add pliablepixels/gap-trap
+```
+
+Or by hand, for Claude Code:
 
 ```
 git clone https://github.com/pliablepixels/gap-trap.git
