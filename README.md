@@ -88,8 +88,7 @@ runs on. Agents write most of its code and no one reads the diffs line
 by line. Chapter 14 of its developer guide,
 [Agent development model](https://zmninjang.readthedocs.io/en/latest/developer-guide/14-agent-development-model.html),
 is the inspiration for gap-trap. It explains rules, contracts, and
-gates, follows one feature from spec to merge, and gives the numbers:
-2,313 commits in eight months with fourteen reverts when it was written.
+gates, and follows one feature from spec to merge.
 
 ## What it costs
 
