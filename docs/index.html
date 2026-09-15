@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gap-trap</title>
+<meta name="description" content="A skill for coding agents. It writes the rules that fit your repository and adds a check for each one that fails the build when the rule is broken.">
+<link rel="icon" href="gap-trap.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f6f7fb;
+    --panel: #ffffff;
+    --ink: #161c4a;
+    --muted: #525a86;
+    --line: #dde1f0;
+    --indigo: #2b35a6;
+    --amber: #f4a62a;
+    --mint: #2fb892;
+    --violet: #7f63dc;
+    --code-bg: #161c4a;
+    --code-ink: #eef0fb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0f1334;
+      --panel: #171c47;
+      --ink: #e9ebf8;
+      --muted: #a4aad0;
+      --line: #2a3066;
+      --indigo: #9aa3ff;
+      --code-bg: #0a0d26;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 1.0625rem/1.65 "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 68rem; margin: 0 auto; padding-inline: 1.5rem; }
+  a { color: var(--indigo); text-underline-offset: 0.18em; }
+  a:focus-visible, button:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+  h1, h2, h3 { font-family: "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif; line-height: 1.1; margin: 0; }
+  h2 { font-size: clamp(1.75rem, 3.2vw, 2.4rem); font-weight: 700; letter-spacing: -0.01em; }
+  p { margin: 0; }
+  code, pre { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+  :not(pre) > code { font-size: 0.9em; background: var(--line); padding: 0.1em 0.35em; border-radius: 4px; }
+
+  /* Header */
+  .top { display: flex; align-items: center; justify-content: space-between; padding-block: 1.25rem; }
+  .brand { display: flex; align-items: center; gap: 0.6rem; font: 700 1.2rem "Bricolage Grotesque", sans-serif; color: var(--ink); text-decoration: none; }
+  .brand img { width: 2.1rem; height: auto; }
+  .top nav { display: flex; gap: 1.5rem; font-weight: 500; }
+  .top nav a { color: var(--muted); text-decoration: none; }
+  .top nav a:hover { color: var(--ink); }
+
+  /* Hero */
+  .hero { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 3rem; align-items: center; padding-block: 3.5rem 4.5rem; }
+  .hero h1 { font-size: clamp(2.6rem, 6.4vw, 4.75rem); font-weight: 700; letter-spacing: -0.025em; }
+  .hero .lede { margin-top: 1.5rem; font-size: 1.25rem; color: var(--muted); max-width: 36rem; }
+  .hero img { width: 100%; height: auto; max-width: 22rem; justify-self: center; }
+
+  .install { margin-top: 2rem; display: flex; align-items: stretch; max-width: 30rem; background: var(--code-bg); color: var(--code-ink); border-radius: 10px; overflow: hidden; }
+  .hero > div { min-width: 0; }
+  .install code { flex: 1; min-width: 0; background: none; border-radius: 0; padding: 0.9rem 1.1rem; font-size: 0.95rem; white-space: nowrap; overflow-x: auto; }
+  .install code::before { content: "$ "; color: var(--amber); }
+  .install button { border: 0; background: transparent; color: var(--code-ink); font: 500 0.9rem "Instrument Sans", sans-serif; padding: 0 1.1rem; cursor: pointer; border-left: 1px solid rgba(255,255,255,0.14); }
+  .install button:hover { background: rgba(255,255,255,0.08); }
+  .hero .alt { margin-top: 0.8rem; font-size: 0.95rem; color: var(--muted); }
+
+  section { padding-block: 4rem; }
+  .intro { max-width: 40rem; }
+  .intro p { margin-top: 1rem; color: var(--muted); }
+
+  /* The catch list: what the agent does, and what stops it */
+  .catches { margin-top: 2.5rem; border-top: 2px solid var(--ink); }
+  .catch { display: grid; grid-template-columns: 1fr 1.15fr; gap: 2.5rem; padding-block: 1.6rem; border-bottom: 1px solid var(--line); }
+  .catch .slip { font-size: 1.15rem; font-weight: 500; }
+  .catch .fix h3 { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 0.55rem; }
+  .catch .fix h3::before { content: ""; width: 0.8rem; height: 0.8rem; border-radius: 3px; background: var(--c); transform: rotate(-12deg); flex: none; }
+  .catch .fix p { margin-top: 0.35rem; color: var(--muted); }
+  .catches-head { display: grid; grid-template-columns: 1fr 1.15fr; gap: 2.5rem; padding-block: 0.7rem; font-size: 0.95rem; color: var(--muted); border-bottom: 1px solid var(--line); }
+
+  /* Steps */
+  .steps { margin: 2.5rem 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; counter-reset: step; }
+  .steps li { counter-increment: step; }
+  .steps li::before { content: counter(step); display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--indigo); color: var(--paper); font: 700 1rem "Bricolage Grotesque", sans-serif; margin-bottom: 1rem; }
+  .steps h3 { font-size: 1.25rem; }
+  .steps p { margin-top: 0.5rem; color: var(--muted); }
+  .steps pre { margin: 0.9rem 0 0; background: var(--code-bg); color: var(--code-ink); padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; overflow-x: auto; }
+  .note { margin-top: 2.5rem; color: var(--muted); max-width: 44rem; }
+
+  /* Origin */
+  .origin-card { display: grid; grid-template-columns: auto 1fr; gap: 3rem; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: clamp(1.75rem, 4vw, 3rem); }
+  .figures { display: grid; gap: 1.25rem; padding-right: 3rem; border-right: 1px solid var(--line); }
+  .figures div { font: 700 2.4rem/1 "Bricolage Grotesque", sans-serif; color: var(--indigo); }
+  .figures span { display: block; margin-top: 0.3rem; font: 400 0.95rem "Instrument Sans", sans-serif; color: var(--muted); }
+  .origin-card p { margin-top: 1rem; color: var(--muted); max-width: 38rem; }
+  .button { display: inline-block; margin-top: 1.5rem; padding: 0.75rem 1.25rem; background: var(--indigo); color: var(--paper); border-radius: 999px; font-weight: 600; text-decoration: none; }
+  .button:hover { filter: brightness(1.1); }
+
+  footer { padding-block: 2.5rem 3rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.95rem; display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; justify-content: space-between; }
+  footer a { color: var(--muted); }
+
+  @media (max-width: 52rem) {
+    .hero { grid-template-columns: 1fr; gap: 2rem; padding-block: 1.5rem 3rem; }
+    .hero img { grid-row: 1; max-width: 9rem; justify-self: start; }
+    .catch, .catches-head { grid-template-columns: 1fr; gap: 0.6rem; }
+    .catches-head { display: none; }
+    .steps { grid-template-columns: 1fr; }
+    .origin-card { grid-template-columns: 1fr; gap: 2rem; }
+    .figures { grid-template-columns: repeat(2, 1fr); padding-right: 0; border-right: 0; padding-bottom: 2rem; border-bottom: 1px solid var(--line); }
+    .top nav a:not(:last-child) { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <a class="brand" href="./"><img src="gap-trap.png" alt="">gap-trap</a>
+  <nav aria-label="Site">
+    <a href="#how">How it works</a>
+    <a href="#origin">Where it started</a>
+    <a href="https://github.com/pliablepixels/gap-trap">GitHub</a>
+  </nav>
+</header>
+
+<main>
+<div class="hero">
+  <div>
+    <h1>Rules your coding agent cannot skip.</h1>
+    <p class="lede">gap-trap is a skill for coding agents. Run it once in a repository. It reads the code, writes the rules that fit it, and adds a check for each rule that fails the commit or the CI run when the rule is broken.</p>
+    <div class="install">
+      <code id="cmd">npx skills add pliablepixels/gap-trap</code>
+      <button type="button" id="copy">Copy</button>
+    </div>
+    <p class="alt">Or copy the skill folder into <code>~/.claude/skills/</code> by hand. <a href="https://github.com/pliablepixels/gap-trap#install">Install notes</a></p>
+  </div>
+  <img src="gap-trap.png" alt="The gap-trap logo: a smiling net catching puzzle pieces marked with code brackets" width="440" height="445">
+</div>
+
+<section id="how">
+  <div class="intro">
+    <h2>Why rules in a text file are not enough</h2>
+    <p>When an agent writes most of your code, you stop reading every diff. Quality drifts, and you find out when something breaks. Your instructions file says what not to do, but the only thing that reads it is the agent that breaks it.</p>
+    <p>gap-trap puts a check behind each rule. Here is the drift it looks for, and what catches it.</p>
+  </div>
+
+  <div class="catches" role="list">
+    <div class="catches-head" aria-hidden="true"><span>The agent</span><span>What catches it</span></div>
+
+    <div class="catch" role="listitem">
+      <p class="slip">Writes a helper that already exists, or crosses a layer boundary because the shortcut compiled.</p>
+      <div class="fix" style="--c: var(--amber)">
+        <h3>Contracts</h3>
+        <p>Each part of the code with one right way to do things (HTTP, logging, settings, auth) gets a short entry: what to use, what never to use, and the check that finds a bypass.</p>
+      </div>
+    </div>
+
+    <div class="catch" role="listitem">
+      <p class="slip">Writes a test that asserts the code ran, not that it did the right thing.</p>
+      <div class="fix" style="--c: var(--mint)">
+        <h3>Proven red</h3>
+        <p>CI runs every new test against the code from before the change. If the test passes there too, it proves nothing, and the job fails.</p>
+      </div>
+    </div>
+
+    <div class="catch" role="listitem">
+      <p class="slip">Adds one more lint warning, one more file over 400 lines, to a backlog nobody has time to clear.</p>
+      <div class="fix" style="--c: var(--violet)">
+        <h3>Ratchets</h3>
+        <p>Known problems are counted and the counts are stored. A count may go down. It may not go up without a reason in the commit message.</p>
+      </div>
+    </div>
+
+    <div class="catch" role="listitem">
+      <p class="slip">Follows a rule for a week, then forgets it, or relearns a lesson the last session already paid for.</p>
+      <div class="fix" style="--c: var(--indigo)">
+        <h3>Gates and playbooks</h3>
+        <p>Every rule names the gate that enforces it, so forgetting it fails the build. The facts the project learned the hard way go into playbooks the next session reads.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>How you use it</h2>
+  <ol class="steps">
+    <li>
+      <h3>Install the skill</h3>
+      <p>With the skills CLI, or by copying the folder into your agent's skills directory.</p>
+      <pre><code>npx skills add pliablepixels/gap-trap</code></pre>
+    </li>
+    <li>
+      <h3>Set up a repository</h3>
+      <p>The skill reads the repo and shows you a short plan. After you answer its questions, it writes the files, proves each gate fails when it should, and commits. It does not push.</p>
+      <pre><code>/gap-trap setup</code></pre>
+    </li>
+    <li>
+      <h3>Refine it later</h3>
+      <p>After the first incidents, or about once a month. It looks for rules without gates, stale contracts, and lessons nobody wrote down, and proposes one PR.</p>
+      <pre><code>/gap-trap refine</code></pre>
+    </li>
+  </ol>
+  <p class="note">It works with any language. Node and Python repos get gates inside their test suite. Go, Rust, Java, Ruby, .NET, PHP, Swift, and C++ get shell versions that need only git, grep, awk, and your test command. The skill needs Opus or a more capable model.</p>
+</section>
+
+<section id="origin">
+  <div class="origin-card">
+    <div class="figures">
+      <div>2,313<span>commits in eight months</span></div>
+      <div>14<span>reverts</span></div>
+    </div>
+    <div>
+      <h2>Where it started</h2>
+      <p>gap-trap packages the framework that <a href="https://github.com/ZoneMinder/zmNinjaNg">zmNinjaNg</a> runs on. One maintainer landed those commits with agents writing the code and no one reading the diffs line by line.</p>
+      <p>Chapter 14 of the zmNinjaNg developer guide describes that setup. It explains rules, contracts, and gates, and follows one feature from spec to merge.</p>
+      <a class="button" href="https://zmninjang.readthedocs.io/en/latest/developer-guide/14-agent-development-model.html">Read the Agent development model</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <span>gap-trap is MIT licensed.</span>
+  <span><a href="https://github.com/pliablepixels/gap-trap">Source on GitHub</a> &nbsp; <a href="https://github.com/pliablepixels/slop-mop">slop-mop</a>, its sibling skill</span>
+</footer>
+
+</div>
+<script>
+  document.getElementById('copy').addEventListener('click', async (e) => {
+    try {
+      await navigator.clipboard.writeText(document.getElementById('cmd').textContent);
+      e.target.textContent = 'Copied';
+      setTimeout(() => { e.target.textContent = 'Copy'; }, 1500);
+    } catch { e.target.textContent = 'Select and copy'; }
+  });
+</script>
+</body>
+</html>
