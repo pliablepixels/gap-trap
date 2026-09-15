@@ -1,4 +1,4 @@
-<p align="center"><img src="gap-trap.png" alt="gap-trap logo: a net catching code puzzle pieces" width="200"></p>
+<p align="center"><img src="assets/gap-trap.png" alt="gap-trap logo: a net catching code puzzle pieces" width="200"></p>
 
 # gap-trap
 
@@ -58,6 +58,9 @@ mkdir -p ~/.claude/skills
 cp -r gap-trap/gap-trap ~/.claude/skills/
 ```
 
+The skill runs on Opus or a more capable model and stops on anything
+smaller. Choosing the wrong contracts costs every later session.
+
 ## Update
 
 Every push to `main` is a new version. With the skills CLI:
@@ -77,9 +80,6 @@ cp -r gap-trap/gap-trap ~/.claude/skills/
 
 A repository you already set up keeps the files setup wrote. Updating
 the skill changes what the next `setup` or `refine` run does.
-
-The skill runs on Opus or a more capable model and stops on anything
-smaller. Choosing the wrong contracts costs every later session.
 
 ## Run
 
