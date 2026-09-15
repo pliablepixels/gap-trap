@@ -69,7 +69,9 @@ In the repository you want to set up:
 
 The skill reads the repo, shows you a short plan (contracts, gates,
 commands), asks about anything it could not settle, then writes the
-files, proves each gate red, and commits. It does not push.
+files, proves each gate red, and commits. It does not push. At the end
+it asks whether to check the repo against the new framework. On yes, it
+lists the existing violations by contract and rule and changes nothing.
 
 Later, after the first incidents or about once a month:
 

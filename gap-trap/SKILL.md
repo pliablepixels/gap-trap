@@ -93,6 +93,17 @@ easy parts", or offer a lighter version.
    budget, which contracts say `Gate: review` and why, and the one
    next step: run `gap-trap refine` after the first incident or in a
    month.
+8. **Offer a check.** End the report with one question: check the repo
+   against the new framework now? On no, stop. On yes, change no files
+   and list, grouped by contract or rule ID:
+   - each ratchet counter, its count, and the file and line behind each
+     unit of it;
+   - each `Gate: review` contract: read the code its `Path:` and
+     `Never:` lines cover and list suspected violations with file and
+     line, marked unverified because no gate checks them;
+   - the red build, type check, or lint items recorded in step 2.
+   Fix nothing in this pass. A fix the user picks is its own commit,
+   and a fix that lowers a count reruns the ratchet with `--update`.
 
 Instruction files are read by agents. Write them as terse statements
 with IDs and gate names. Human-voice prose belongs in the repo's docs,
