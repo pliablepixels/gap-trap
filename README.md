@@ -1,3 +1,5 @@
+<p align="center"><img src="gap-trap.png" alt="gap-trap logo: a net catching code puzzle pieces" width="200"></p>
+
 # gap-trap
 
 Turns vibe coding into high quality code. Complements SDD if you are using it (think of it as the inner loop within)
