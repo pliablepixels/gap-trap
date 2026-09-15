@@ -56,9 +56,13 @@
   .top { display: flex; align-items: center; justify-content: space-between; padding-block: 1.25rem; }
   .brand { display: flex; align-items: center; gap: 0.6rem; font: 700 1.2rem "Bricolage Grotesque", sans-serif; color: var(--ink); text-decoration: none; }
   .brand img { width: 2.1rem; height: auto; }
-  .top nav { display: flex; gap: 1.5rem; font-weight: 500; }
+  .top nav { display: flex; align-items: center; gap: 1.5rem; font-weight: 500; }
   .top nav a { color: var(--muted); text-decoration: none; }
   .top nav a:hover { color: var(--ink); }
+  .top nav .stars { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--ink); border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 0.25rem 0.8rem; }
+  .stars svg { color: var(--amber); }
+  #star-count { padding-left: 0.5rem; border-left: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  [hidden] { display: none !important; }
 
   /* Hero */
   .hero { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 3rem; align-items: center; padding-block: 3.5rem 4.5rem; }
@@ -128,7 +132,10 @@
   <nav aria-label="Site">
     <a href="#how">How it works</a>
     <a href="#origin">Where it started</a>
-    <a href="https://github.com/pliablepixels/gap-trap">GitHub</a>
+    <a class="stars" href="https://github.com/pliablepixels/gap-trap" aria-label="Star gap-trap on GitHub">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 .25a.75.75 0 0 1 .67.42l1.88 3.8 4.2.61a.75.75 0 0 1 .41 1.28l-3.04 2.96.72 4.18a.75.75 0 0 1-1.09.79L8 12.33l-3.75 1.97a.75.75 0 0 1-1.09-.8l.72-4.17L.84 6.37a.75.75 0 0 1 .41-1.28l4.2-.61L7.33.67A.75.75 0 0 1 8 .25Z"/></svg>
+      Star <span id="star-count" hidden></span>
+    </a>
   </nav>
 </header>
 
@@ -242,6 +249,15 @@
       setTimeout(() => { e.target.textContent = 'Copy'; }, 1500);
     } catch { e.target.textContent = 'Select and copy'; }
   });
+  // Unauthenticated GitHub API: 60 requests an hour per visitor IP. On failure the button just says "Star".
+  fetch('https://api.github.com/repos/pliablepixels/gap-trap')
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then(({ stargazers_count: n }) => {
+      const el = document.getElementById('star-count');
+      el.textContent = n.toLocaleString('en');
+      el.hidden = false;
+    })
+    .catch(() => {});
 </script>
 </body>
 </html>
