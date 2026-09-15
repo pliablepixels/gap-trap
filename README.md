@@ -1,6 +1,6 @@
 # gap-trap
 
-Turns vibe coding into high quality code. Complements SDD if you are using it (think of it as the inner loop within in)
+Turns vibe coding into high quality code. Complements SDD if you are using it (think of it as the inner loop within)
 
 ## The problem
 
