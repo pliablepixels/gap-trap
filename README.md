@@ -56,6 +56,26 @@ mkdir -p ~/.claude/skills
 cp -r gap-trap/gap-trap ~/.claude/skills/
 ```
 
+## Update
+
+Every push to `main` is a new version. With the skills CLI:
+
+```
+npx skills update gap-trap
+```
+
+For a hand install, pull the clone and replace the copy, so files
+removed upstream do not linger:
+
+```
+git -C gap-trap pull
+rm -rf ~/.claude/skills/gap-trap
+cp -r gap-trap/gap-trap ~/.claude/skills/
+```
+
+A repository you already set up keeps the files setup wrote. Updating
+the skill changes what the next `setup` or `refine` run does.
+
 The skill runs on Opus or a more capable model and stops on anything
 smaller. Choosing the wrong contracts costs every later session.
 
