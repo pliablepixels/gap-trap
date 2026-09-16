@@ -20,7 +20,7 @@ Gate: `{{path/to/instruction-gate}}` ({{what it greps}}); the ratchet holds {{co
 - Run commands from `{{WORKDIR}}`. Run `{{HOOK_INSTALL}}` once per clone so the pre-commit gates exist.
 - Prose people read (docs, commit bodies, PR and issue bodies, review
   comments) is written with the slop-mop skill; prose reviews run its
-  detect mode on Opus or newer.
+  detect mode on the harness's top coding model.
 - UI changes that alter behavior or navigation need an outcome-based
   end-to-end test; cosmetic changes rely on existing gates.
 - A `feat` PR links its spec or says in its `## Spec` section why it
@@ -48,6 +48,7 @@ Read each listed playbook before work in that area.
 
 | Work | Read first |
 |---|---|
+| Multi-agent or long-running work | `agents/generic/agent-workflows.md` |
 | Naming, briefs, docs, proposing work | `agents/project/glossary.md`, `agents/project/out-of-scope.md` |
 | Tests, UI, or platform checks | `agents/project/testing.md` |
 | Developer or user documentation | `agents/project/documentation.md` |

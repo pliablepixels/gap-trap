@@ -58,7 +58,7 @@ log --oneline` prints 7) and the gate resolves them.
 5. Every 8-hex commit hash cited in `domain-context.md` exists
    (`git cat-file -e <hash>^{commit}`; CI needs full history).
 6. Knowledge files (`domain-context.md`, `glossary.md`,
-   `out-of-scope.md`, `claude-workflows.md`) contain no email or IP
+   `out-of-scope.md`, `agent-workflows.md`) contain no email or IP
    address.
 7. Every `rule <ID>` cited in the developer docs exists in `AGENTS.md`.
 8. Grep gates for each contract Never clause a text search settles,

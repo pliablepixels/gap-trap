@@ -26,7 +26,7 @@ KNOWLEDGE_FILES = [
     "agents/project/domain-context.md",
     "agents/project/glossary.md",
     "agents/project/out-of-scope.md",
-    "agents/generic/claude-workflows.md",
+    "agents/generic/agent-workflows.md",
 ]
 DOCS_DIR = "docs"                                   # ADAPT: "" skips the rule-ID check
 # ADAPT: (name, pattern over comment-stripped source, exempt-path predicate)

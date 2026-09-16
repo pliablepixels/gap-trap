@@ -1,7 +1,9 @@
-# Claude workflow playbook
+# Agent workflow playbook
 
 Advisory, not binding. Last validated 2026-09 against Claude Code with the
-Claude 5 family, in the repo gap-trap was extracted from. The instruction files (`AGENTS.md`, `AGENTS.project.md`)
+Claude 5 family, in the repo gap-trap was extracted from. Codex has the same
+pieces under other names (subagents, `/model`, `~/.codex/config.toml`); those
+lines come from its docs and have not been through a run here. The instruction files (`AGENTS.md`, `AGENTS.project.md`)
 state what must hold; this playbook records what has worked. When the two
 disagree, the instruction files win. Harness features churn; check the date
 above before trusting specifics.
@@ -30,12 +32,14 @@ named fleet.
 ## Orchestration
 
 - The orchestrator (the main session, or a team lead coordinating others)
-  runs on Opus 4.8 or newer; never a smaller model. Coordination quality
-  bounds everything downstream: a weak orchestrator writes weak briefs,
-  misreads reports, and wastes every strong agent under it. An instruction
-  file cannot switch a running session's model, so pin the default in
-  `.claude/settings.json` (`"model": "opus"`); if your session runs on
-  something smaller anyway, say so and suggest `/model`.
+  runs on the harness's top coding model; never a smaller one. Coordination
+  quality bounds everything downstream: a weak orchestrator writes weak
+  briefs, misreads reports, and wastes every strong agent under it. An
+  instruction file cannot switch a running session's model, so pin the
+  default in the harness config (Claude Code: `"model": "opus"` in
+  `.claude/settings.json`; Codex: `model` in `~/.codex/config.toml`); if
+  your session runs on something smaller anyway, say so and suggest
+  `/model`.
 - Implementation delegates to subagents by default: the orchestrator's
   context stays clean for briefs, report verdicts, and review decisions,
   and an orchestrator that edits files skips its own review structure.
@@ -54,9 +58,9 @@ named fleet.
 - Model tiering: cheapest model when the task text contains the complete
   content to write (transcription plus testing); mid tier for code reviews;
   the most capable model only for the final whole-branch review. Tasks whose
-  output is prose (docs, reports, prose review with slop-mop) run on Opus or
-  newer. Smaller models follow slop-mop's word lists but skip the checks that
-  need judgment.
+  output is prose (docs, reports, prose review with slop-mop) run on the
+  harness's top coding model. Smaller models follow slop-mop's word lists but
+  skip the checks that need judgment.
 - Tasks involving judgment get an independent review against their brief
   before the next task starts; purely mechanical tasks rely on their gates.
   Fixes get a scoped re-review that verdicts each finding ADDRESSED or NOT
@@ -125,7 +129,9 @@ named fleet.
   consecutive waves each introduced one). Budget a scoped re-review per
   wave; a fresh Critical inside a wave is fixed, never parked.
 - Subagent final plain text often never reaches the controller. Every
-  dispatch states: report via SendMessage to the controller.
+  dispatch states where the report goes: the report-file path in the
+  brief, which works in any harness, plus the harness's own channel
+  (Claude Code: SendMessage to the controller).
 - Briefs cite symbols and anchors, never line numbers; line refs rot
   within hours on an active branch.
 - A one-line fix the reviewer itself specified needs no re-review round.

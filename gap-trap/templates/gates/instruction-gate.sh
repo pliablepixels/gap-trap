@@ -17,7 +17,7 @@ TEST_PATH_RE=${GT_TEST_PATH_RE:-'(^|/)(__tests__|tests?|spec)(/|$)|_test\.|\.tes
 FORBIDDEN_IN_CORE=${GT_FORBIDDEN_IN_CORE:-'{{PRODUCT}} {{FRAMEWORK}} agents/project'}  # ADAPT
 WORD_BUDGET=${GT_WORD_BUDGET:-4000}         # ADAPT: current count plus room (C7)
 MIN_CONTRACTS=${GT_MIN_CONTRACTS:-2}       # the honest count; never pad
-KNOWLEDGE_FILES='agents/project/domain-context.md agents/project/glossary.md agents/project/out-of-scope.md agents/generic/claude-workflows.md'
+KNOWLEDGE_FILES='agents/project/domain-context.md agents/project/glossary.md agents/project/out-of-scope.md agents/generic/agent-workflows.md'
 DOCS_DIR=${GT_DOCS_DIR:-docs}               # ADAPT: '' skips the rule-ID check
 # ADAPT: one grep gate per printf row: name, ERE over source lines, ERE over
 # relative paths to exempt. Fields are tab-separated so patterns may use `|`.

@@ -30,7 +30,7 @@ const KNOWLEDGE_FILES = [
   'agents/project/domain-context.md',
   'agents/project/glossary.md',
   'agents/project/out-of-scope.md',
-  'agents/generic/claude-workflows.md',
+  'agents/generic/agent-workflows.md',
 ];
 /** ADAPT: where developer docs live, or '' to skip the rule-ID check. */
 const DOCS_DIR = 'docs/developer-guide';

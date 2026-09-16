@@ -20,19 +20,21 @@ framework exists.
 
 ## Model gate
 
-This skill runs on Opus or a more capable model (Opus 4.8 or newer, Opus
-5, Fable, Mythos). Discovery decides which parts of a codebase get a
-contract, and a wrong contract costs every later session. Your system
-prompt names your model.
+This skill runs on the top coding model of your harness: in Claude Code,
+Opus or a more capable model (Opus 4.8 or newer, Opus 5, Fable, Mythos);
+in Codex, the frontier coding model at high or xhigh reasoning effort.
+Discovery decides which parts of a codebase get a contract, and a wrong
+contract costs every later session. Your system prompt names your model.
 
-If it is Sonnet, Haiku, or anything below Opus, stop. Read nothing,
-write nothing. Say exactly this and end the turn:
+If it is a cheaper or faster tier (Sonnet, Haiku, a mini model, or low
+reasoning effort), stop. Read nothing, write nothing. Say exactly this
+and end the turn:
 
-> gap-trap runs on Opus or a more capable model. You are on
+> gap-trap runs on the top coding model of this harness. You are on
 > <model name>. Switch with `/model`, then run gap-trap again.
 
-Do not dispatch Opus subagents from a smaller orchestrator, start "the
-easy parts", or offer a lighter version.
+Do not dispatch stronger subagents from a weaker orchestrator, start
+"the easy parts", or offer a lighter version.
 
 ## setup
 
@@ -52,11 +54,13 @@ easy parts", or offer a lighter version.
    round of questions, only about what discovery could not settle. Then
    proceed.
 3. **Install slop-mop.** `git clone https://github.com/pliablepixels/slop-mop.git`
-   into your scratch directory and copy `slop-mop/slop-mop` to
-   `~/.claude/skills/slop-mop` (skip if present). It is not vendored into
+   into your scratch directory and copy `slop-mop/slop-mop` to the skills
+   directory of the harness you are running in (Claude Code:
+   `~/.claude/skills/`; Codex: `~/.agents/skills/`), skipping it if
+   present. It is not vendored into
    the repo; the project rule in `AGENTS.project.md` requires it.
 4. **Write the instruction files** from `templates/`. `AGENTS.md` and
-   `agents/generic/claude-workflows.md` are copied unchanged, with one
+   `agents/generic/agent-workflows.md` are copied unchanged, with one
    exception: a rule whose gate cannot exist in this repo (I3's
    accessibility lint and C3's locales in a repo with no UI) gets its
    `Gate:` clause replaced by `Gate: n/a, no <thing> in this repo`.
@@ -72,9 +76,13 @@ easy parts", or offer a lighter version.
    its gate name or `Gate: review`, a playbook row goes verbatim into
    the named `agents/project/` file, a command row fills the
    verification block, and a duplicate or dropped row is left out. No
-   rule is dropped silently; the confirm step showed the table. The
-   old file is replaced by the template that owns its name, and
-   `CONTRIBUTING.md` stays where it is. The user sees the diff.
+   rule is dropped silently; the confirm step showed the table. A file
+   whose name a template owns (`AGENTS.md`, `CLAUDE.md`) is replaced by
+   that template. Any other instruction file (`.cursorrules`,
+   `.github/copilot-instructions.md`) becomes a one-line pointer to
+   `AGENTS.md`, so the agent that reads it lands on the rules instead of
+   a stale copy. `CONTRIBUTING.md` stays where it is. The user sees the
+   diff.
 5. **Write the gates** from `reference/gates.md`, in the repo's own test
    runner and CI provider: the instruction gate, proven red, the PR body
    check, the ratchet (always, seeded with the counters the repo
