@@ -40,6 +40,11 @@ Record, with the file that proves each:
 - Existing instruction files: `AGENTS.md`, `CLAUDE.md`, `.cursorrules`,
   `.github/copilot-instructions.md`, `CONTRIBUTING.md`. Record each
   path; section 4 sorts their rules.
+- Always-loaded files outside the repo: `~/.codex/AGENTS.md` and
+  `~/.claude/CLAUDE.md`. They are not migrated and not edited. Record a
+  prose-style rule there that conflicts with P10, such as a terse or
+  compressed house style, because setup names it in the report and the
+  prose this run writes will otherwise follow it.
 - Docs: user docs, developer docs, ADRs, and where they live.
 
 ## 2. History probes

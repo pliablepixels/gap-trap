@@ -90,6 +90,10 @@ periodic sweep for lessons nobody recorded at the time.
 `AGENTS.md`, `AGENTS.project.md`, and `CLAUDE.md` load into every
 session, so the instruction gate caps their combined words (start at
 current count plus room; zmNinjaNg sits near 2,200 under a 4,000 cap).
+How they load differs by harness. Claude Code reads `CLAUDE.md`, which
+imports the other two. Codex reads `AGENTS.md` from the repo root down
+and has no import syntax, so it reaches `AGENTS.project.md` only through
+the load-order line at the top of `AGENTS.md`; keep that line.
 Detail goes to playbooks, which load only for work in their area.
 Instruction-following degrades with rule count, so every addition
 answers: could a script check this instead?

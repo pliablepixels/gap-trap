@@ -36,7 +36,9 @@ It sets up four things:
 
 It also installs [slop-mop](https://github.com/pliablepixels/slop-mop),
 a sibling skill, so the agent's docs, commit messages, and PR bodies read
-like a person wrote them.
+like a person wrote them. A harness loads its skills when the session
+starts, so slop-mop applies from the session after the one that installs
+it.
 
 Works with any language. Node and Python repos get gates inside their
 test suite; everything else (Go, Rust, Java, Ruby, .NET, PHP, Swift, C++)
