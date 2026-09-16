@@ -50,15 +50,25 @@ Do not dispatch stronger subagents from a weaker orchestrator, start
    goes. A build, type check, or
    lint that is already red is the first item: setup fixes only what
    its own gate files need (a missing type package, a lockfile) and
-   records the rest as a ratchet count or an out-of-scope entry. Ask one
-   round of questions, only about what discovery could not settle. Then
-   proceed.
+   records the rest as a ratchet count or an out-of-scope entry. Name
+   the cause of each red before recording it: reproduce it, read the
+   failure, and say what is broken. A failure that names an environment
+   variable can still be a code defect. In one trial, seven tests
+   failing with `Environment variable not found: DATABASE_URL` were a
+   Prisma mock loaded after the module under test, not a missing `.env`;
+   recording that as an environment gap would have buried the bug and
+   the contract that prevents it. Ask one round of questions, only about
+   what discovery could not settle. Then proceed.
 3. **Install slop-mop.** `git clone https://github.com/pliablepixels/slop-mop.git`
    into your scratch directory and copy `slop-mop/slop-mop` to the skills
    directory of the harness you are running in (Claude Code:
    `~/.claude/skills/`; Codex: `~/.agents/skills/`), skipping it if
    present. It is not vendored into
    the repo; the project rule in `AGENTS.project.md` requires it.
+   A harness loads its skill list when the session starts, so a skill
+   installed here is not available to the run that installed it: write
+   this run's prose from P10 in `AGENTS.md`, and tell the user in the
+   report that slop-mop applies from their next session.
 4. **Write the instruction files** from `templates/`. `AGENTS.md` and
    `agents/generic/agent-workflows.md` are copied unchanged, with one
    exception: a rule whose gate cannot exist in this repo (I3's
@@ -96,11 +106,20 @@ Do not dispatch stronger subagents from a weaker orchestrator, start
    at the current count plus half, rounded up to the next 500.
 6. **Prove each gate red** with a scratch violation, remove the
    violation, run the repo's full test command, and commit one logical
-   change per commit. Do not push unless asked.
+   change per commit, in this order: the instruction files with the gate
+   that checks them; one commit per gate after that (ratchet, proven
+   red, mutation smoke, PR body check); the combined gate command and
+   the pre-commit hook; CI last. One commit holding the whole framework
+   hides which gate was proven red against what, and leaves nothing to
+   revert on its own. Do not push unless asked.
 7. **Report** what was written, the instruction word count against the
-   budget, which contracts say `Gate: review` and why, and the one
-   next step: run `gap-trap refine` after the first incident or in a
-   month.
+   budget, which contracts say `Gate: review` and why, whether this run
+   installed slop-mop and so it applies from the next session, any
+   always-loaded file outside the repo whose prose style conflicts with
+   the repo's (`~/.codex/AGENTS.md`, `~/.claude/CLAUDE.md`, a terse or
+   compressed house style): name the file, and say that the repo's rule
+   governs repo prose. End with the one next step: run `gap-trap refine`
+   after the first incident or in a month.
 8. **Offer a check.** End the report with one question: check the repo
    against the new framework now? On no, stop. On yes, change no files
    and list, grouped by contract or rule ID:

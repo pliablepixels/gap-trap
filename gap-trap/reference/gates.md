@@ -168,3 +168,9 @@ pushed there. A GitLab remote gets the three jobs as `.gitlab-ci.yml`.
 - A second run of the same linter (an advisory pass beside a ratchet).
 - Any gate whose input you have not read once. A gate that scans
   nothing is green (M2); assert the file count it scanned.
+- A pass-branch for a known red. A gate that reads the failure text and
+  succeeds on a match (`if output includes "Environment variable not
+  found: DATABASE_URL" then pass`) exempts every future failure that
+  prints the same string, including the one it was built to catch. A
+  red that stays for now is a ratchet count or an out-of-scope entry,
+  recorded outside the gate, and the gate keeps failing on it.
