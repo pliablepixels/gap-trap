@@ -127,6 +127,23 @@ The origin repo's full gate set (4,400 unit tests, a build, three lints)
 runs in about a minute locally. The instruction gate adds about a second.
 Proven red runs only in CI.
 
+## Release
+
+For the maintainer. `scripts/release.sh` bumps the version tag, writes
+the notes from the commits since the last tag, and publishes the release
+with `gh`:
+
+```
+scripts/release.sh              # patch bump
+scripts/release.sh minor        # feature bump
+scripts/release.sh v1.0.0       # that exact version
+scripts/release.sh --dry-run    # print the version and notes, change nothing
+```
+
+It stops if you are not on `main`, the tree has uncommitted changes, or
+`main` and `origin/main` differ. The skills CLI installs from `main`, so
+a tag marks a version rather than gating one.
+
 ## Layout
 
 ```
