@@ -143,7 +143,7 @@
 <div class="hero">
   <div>
     <h1>Rules your coding agent cannot skip.</h1>
-    <p class="lede">gap-trap is a skill for coding agents. Run it once in a repository. It reads the code, writes the rules that fit it, and adds a check for each rule that fails the commit or the CI run when the rule is broken.</p>
+    <p class="lede">gap-trap is a skill for Claude Code and Codex. Run it once in a repository. It reads the code, writes the rules that fit it, and adds a check for each rule that fails the commit or the CI run when the rule is broken.</p>
     <div class="install">
       <code id="cmd">npx skills add pliablepixels/gap-trap</code>
       <button type="button" id="copy">Copy</button>
@@ -202,7 +202,7 @@
   <ol class="steps">
     <li>
       <h3>Install the skill</h3>
-      <p>With the skills CLI, or by copying the folder into your agent's skills directory.</p>
+      <p>With the skills CLI, or by copying the folder into <code>~/.claude/skills</code> for Claude Code, <code>~/.agents/skills</code> for Codex.</p>
       <pre><code>npx skills add pliablepixels/gap-trap</code></pre>
     </li>
     <li>
@@ -216,7 +216,7 @@
       <pre><code>/gap-trap refine</code></pre>
     </li>
   </ol>
-  <p class="note">It works with any language. Node and Python repos get gates inside their test suite. Go, Rust, Java, Ruby, .NET, PHP, Swift, and C++ get shell versions that need only git, grep, awk, and your test command. The skill needs Opus or a more capable model.</p>
+  <p class="note">It works with any language. Node and Python repos get gates inside their test suite. Go, Rust, Java, Ruby, .NET, PHP, Swift, and C++ get shell versions that need only git, grep, awk, and your test command. The skill runs in Claude Code as <code>/gap-trap setup</code> and in Codex as <code>$gap-trap setup</code>, on the harness's top coding model. The repository it sets up works with any agent that reads <code>AGENTS.md</code>.</p>
 </section>
 
 <section id="origin">

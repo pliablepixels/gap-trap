@@ -50,16 +50,19 @@ With the [skills](https://github.com/vercel-labs/skills) CLI:
 npx skills add pliablepixels/gap-trap
 ```
 
-Or by hand, for Claude Code:
+Or by hand. Claude Code reads `~/.claude/skills`, Codex reads
+`~/.agents/skills`:
 
 ```
 git clone https://github.com/pliablepixels/gap-trap.git
-mkdir -p ~/.claude/skills
+mkdir -p ~/.claude/skills            # Codex: mkdir -p ~/.agents/skills
 cp -r gap-trap/gap-trap ~/.claude/skills/
 ```
 
-The skill runs on Opus or a more capable model and stops on anything
-smaller. Choosing the wrong contracts costs every later session.
+The skill runs on the top coding model of the harness (Opus or better in
+Claude Code, the frontier coding model at high reasoning in Codex) and
+stops on anything smaller. Choosing the wrong contracts costs every later
+session.
 
 ## Update
 
@@ -74,7 +77,7 @@ removed upstream do not linger:
 
 ```
 git -C gap-trap pull
-rm -rf ~/.claude/skills/gap-trap
+rm -rf ~/.claude/skills/gap-trap     # Codex: ~/.agents/skills/gap-trap
 cp -r gap-trap/gap-trap ~/.claude/skills/
 ```
 
@@ -88,6 +91,8 @@ In the repository you want to set up:
 ```
 /gap-trap setup
 ```
+
+Codex invokes the same skill as `$gap-trap setup`.
 
 The skill reads the repo, shows you a short plan (contracts, gates,
 commands), asks about anything it could not settle, then writes the
