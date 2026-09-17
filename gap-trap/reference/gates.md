@@ -38,23 +38,31 @@ test-dir exemptions:
 
 Spec (one test file, runs with the unit tests). In `Path:` and `Gate:`
 lines, backtick only what the gate can look up: a file path (contains
-`/`) or a bare symbol found as a whole word in the source tree. A
+`/`) or a bare symbol. A symbol on a `Path:` line is looked for inside
+the paths that line names, because that is the claim the line makes; a
+symbol anywhere else is looked for across the non-test source. A
 counter name, a dotted call such as `log.Print`, or a flag goes
-unquoted. The minimum contract count is the honest number, two is
+unquoted. Lines may wrap: a field runs on until the next field or a
+blank line. The minimum contract count is the honest number, two is
 fine; never pad. Cite commit hashes with at least 7 characters (`git
 log --oneline` prints 7) and the gate resolves them.
 
 1. `AGENTS.project.md` has at least N contracts and each has `Owns:`,
    `Path:`, `Never:`, `Gate:` lines.
 2. Every backticked token in a `Path:` or `Gate:` line exists: a token
-   with `/` is a file path; any other is a word found in the source
-   tree. Failure names the contract and the token.
+   with `/` is a file path; any other is a symbol, resolved against the
+   paths its own `Path:` line names and otherwise against the non-test
+   source. A symbol that survives only in a test is not a symbol the
+   code uses. Failure names the contract and the token. A contract
+   whose `Path:` and `Gate:` lines give the gate nothing to look up
+   fails too.
 3. `AGENTS.md` contains none of a list of project-specific tokens
    (product name, framework names, file paths). Fill the list from
    discovery.
-4. `AGENTS.md` + `AGENTS.project.md` + `CLAUDE.md` stay under a word
-   budget. Set it at current count plus room; raising it needs a
-   reason in the commit message.
+4. `AGENTS.md` + `AGENTS.project.md` + `CLAUDE.md` all exist and stay
+   under a word budget. Set it at current count plus room; raising it
+   needs a reason in the commit message. Summing only the files that
+   happen to be present means deleting one comes in under budget.
 5. Every 8-hex commit hash cited in `domain-context.md` exists
    (`git cat-file -e <hash>^{commit}`; CI needs full history).
 6. Knowledge files (`domain-context.md`, `glossary.md`,
@@ -62,11 +70,17 @@ log --oneline` prints 7) and the gate resolves them.
    address.
 7. Every `rule <ID>` cited in the developer docs exists in `AGENTS.md`.
 8. Grep gates for each contract Never clause a text search settles,
-   comments stripped, with the sanctioned file(s) exempt. The
+   comments stripped by a scanner that knows a string from a comment,
+   with the sanctioned file(s) exempt. The
    instruction gate holds only the clauses that are clean today (zero
    is the number). A clause with violations today goes into the ratchet
    as a count instead, so the backlog can fall but not grow and the
    instruction gate never carries an allowed number.
+
+9. Every check states its own denominator: tokens resolved, files
+   scanned, contracts read. A check that quietly measured nothing
+   reports the same green as one that measured everything, which is how
+   a gate dies without anyone noticing (M2).
 
 References: `templates/gates/instruction-gate.test.ts` (vitest),
 `templates/gates/instruction_gate_test.py` (pytest),
@@ -78,14 +92,30 @@ directory needs `@types/node` installed or the gate itself fails `tsc`.
 ## Proven red
 
 Spec: for a PR range, take the unit test files changed since the fork
-point, copy them into a worktree at the fork point, run them there, fail
-when they pass. Skip and say why when no source changed, or when the
-title type is `docs|chore|ci|refactor|build|style|test` and no unit test
-changed. Fail when source changed and no test did. Read the runner's
-JSON report: count assertion failures and missing references (`is not a
-function`, `Cannot find module`) apart, print both, warn when every
-failure is a missing reference. Repo-hygiene tests (the instruction
-gate) are exempt: they are proven red by scratch violation.
+point, copy them into a worktree at the fork point, run each one there,
+and fail when it passes. Judge each file on its own result: batched into
+one run and one exit status, a file that passed on the old code rides
+out on a failing sibling. A test deleted at head is not run, because the
+worktree still holds its older copy, which passes.
+
+Skip and say why when no source changed, when the only source changes
+are the gate scripts (proven red by scratch violation), when the title
+type is `docs|chore|ci|refactor|build|style|test` and no unit test
+changed, or when the only changed tests are end-to-end and need a live
+server. The last two are bypasses rather than proofs — a title is
+unverified text — so they are announced as CI warnings. A test-support
+file is not a test and excuses nothing. Fail when source changed and no
+test did.
+
+Read the runner's report: count assertion failures and missing
+references (`is not a function`, `Cannot find module`, `undefined:`)
+apart per file, print both, and warn for each file whose red is only a
+missing reference. Match assertion evidence against the runner's own
+verdict lines, not the whole output: pytest echoes the failing source
+line, so a bare `assert` over everything marks every missing-symbol red
+as an assertion red. A non-zero exit with no report, no sign the runner
+started, or a status of 126, 127 or a signal is a gate that could not
+run: exit 2, never a pass.
 
 References: `templates/gates/proven-red.mjs` (Node, reads the vitest
 JSON report) and `templates/gates/proven-red.sh` (any stack, reads the
@@ -98,7 +128,16 @@ Adapt the three classifiers (unit test, test support, non-code) and the
 Spec: a JSON baseline of named counts. The check fails when a count
 grows, prints improvements when one falls, and fails when the baseline
 sits more than a small slack above the real count (a raised number
-nobody lowered back). `--update` rewrites the baseline.
+nobody lowered back). Every baseline name is checked, not only the
+configured counters, so deleting a counter cannot retire the number it
+held. A counter command that fails, or prints anything but one whole
+number, is an error and exits 2: counted as zero it reads as a cleared
+backlog.
+
+`--update` only lowers. A count that rose, or a baseline name whose
+counter has gone, needs a hand edit, so the raise arrives as a
+reviewable diff with a reason in the commit message rather than as a
+flag the agent can reach for.
 
 The ratchet is always installed, because C2, C6, and C7 in `AGENTS.md`
 name it as their gate. Seed it with what the repo supports: files over

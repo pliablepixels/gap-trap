@@ -37,8 +37,9 @@ Gate: `{{path/to/instruction-gate}}` ({{what it greps}}); the ratchet holds {{co
 ```
 
 Per commit, run what the change touches; the full set before push or PR.
-Ratchet baselines lower with `{{RATCHET_CMD}} --update`; raising one needs
-a reason in the commit message (C7). CI also runs proven red (P2) and
+Ratchet baselines lower with `{{RATCHET_CMD}} --update`, which refuses to
+write a rise; raising one is a hand edit to the baseline file with a reason
+in the commit message (C7). CI also runs proven red (P2) and
 `pr-acceptance` (PR body needs `## Acceptance` content, and `## Spec` on a
 `feat`). State completed checks in handoff.
 
