@@ -15,24 +15,32 @@
  *
  *   node scripts/proven-red.mjs <base> <head> [--title "<pr title>"]
  *
- * Skips, and says so: a range that changes no source; a source change with no
- * unit test whose title type is docs, chore, ci, refactor, build, style, or
- * test (no behavior change to prove); a range whose only changed tests are
- * end-to-end steps, which need a live server and cannot run here. Fails when
- * a behavior change arrives with no changed test at all. A changed unit test
- * is always proved, whatever the title claims.
+ * Every changed test file is judged on its own. One file that fails carries
+ * no proof for the others: a run that batched them together let a test which
+ * passed on the old code ride out on a failing sibling's exit code.
+ *
+ * Skips, and says so: a range that changes no source; a range whose only
+ * source changes are the gate scripts themselves (proven red by scratch
+ * violation); a range whose only changed tests are end-to-end steps, which
+ * need a live server. Two skips are bypasses rather than proofs, and say so
+ * as a CI warning: a skip-type title, which is unverified text, and the
+ * end-to-end case. Fails when a behavior change arrives with no changed
+ * test. A changed unit test is always proved, whatever the title claims.
  *
  * A red run is not one proof but two. A test that fails an assertion on the
  * old code shows the assertion bites. A test that fails only because it
  * references a symbol the fork point does not have (`x is not a function`,
  * `Cannot find module`) shows the code is new and nothing about the
  * assertions; that is the only red a new module can ever give against the
- * fork point. The job reads the failures and says which kind it saw, and
- * warns when every failure is the second kind, so a reviewer knows the
- * assertions still need a look (M2: read what a gate measured).
+ * fork point. The job reads each file's failures and names the files whose
+ * red is of the second kind, so a reviewer knows which assertions still need
+ * a look (M2: read what a gate measured).
+ *
+ * Exit codes: 0 proved or skipped, 1 a test proved nothing, 2 the gate could
+ * not run (no report, a test file the runner never opened).
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -40,44 +48,65 @@ import { fileURLToPath } from 'node:url';
 
 export const SKIP_TYPES = ['docs', 'chore', 'ci', 'refactor', 'build', 'style', 'test'];
 
-// ADAPT: the three classifiers below are the whole port. Unit tests are what
-// gets proven; test support travels with them but is not proven (repo-hygiene
-// gates are proven red by scratch violation instead); non-code never counts
-// as a behavior change. UNIT_TEST wins where both match, so a `__tests__/`
-// file is a unit test and TEST_SUPPORT only catches helpers beside it. The origin repo's values are shown. APP_DIR is the
-// directory the test runner runs from, relative to the repo root ('' for the
-// root itself).
+// ADAPT: the classifiers below are the whole port. Unit tests are what gets
+// proven. End-to-end tests are real tests that cannot run here, so they skip
+// with a warning. Test support travels with the tests but is not a test and
+// never excuses one. Gate files are proven red by scratch violation instead.
+// Non-code never counts as a behavior change. UNIT_TEST wins where more than
+// one matches. The origin repo's values are shown. APP_DIR is the directory
+// the test runner runs from, relative to the repo root ('' for the root).
 const APP_DIR = 'app';
 const UNIT_TEST = /^app\/src\/(?!tests\/).*\.test\.(ts|tsx)$/;
-const TEST_SUPPORT = /^app\/src\/tests\/|\/__tests__\/|^app\/tests\/steps\//;
+const E2E_TEST = /^app\/tests\/steps\//;
+const TEST_SUPPORT = /^app\/src\/tests\/|\/__tests__\//;
+const GATE_FILE = /^scripts\/|instruction-gate|proven-red|ratchet/;
 const NON_CODE = /^(docs\/|agents\/|\.github\/|.*\.md$|.*\.rst$|app\/\.[\w-]+-baseline\.json$)/;
 // ADAPT: the runner and its JSON report. vitest: `--reporter=json --outputFile=<path>`.
 // pytest: `--json-report --json-report-file=<path>` (pytest-json-report), and
-// map its `tests[].longrepr` into readFailures. go test: `-json`.
+// map its `tests[].nodeid` and `longrepr` into readFileResults. go test: `-json`.
 const TEST_CMD = ['npx', 'vitest', 'run'];
 
-/** Split a changed-file list into what to run, what to carry along, and what counts as behavior. */
-export function classify(files) {
-  const unitTests = files.filter((f) => UNIT_TEST.test(f));
-  const testSupport = files.filter((f) => TEST_SUPPORT.test(f) && !UNIT_TEST.test(f));
-  const source = files.filter(
-    (f) => !UNIT_TEST.test(f) && !TEST_SUPPORT.test(f) && !NON_CODE.test(f),
+/**
+ * Split a changed-file list into what to run, what to carry along, and what
+ * counts as behavior. `deleted` names the paths gone at head: a deleted test
+ * cannot be proven and must not be run, because the fork-point worktree still
+ * holds its old copy, which passes and reads as a test that proves nothing.
+ */
+export function classify(files, deleted = new Set()) {
+  const live = (f) => !deleted.has(f);
+  const unitTests = files.filter((f) => UNIT_TEST.test(f) && live(f));
+  const e2eTests = files.filter((f) => E2E_TEST.test(f) && !UNIT_TEST.test(f) && live(f));
+  const testSupport = files.filter(
+    (f) => TEST_SUPPORT.test(f) && !UNIT_TEST.test(f) && !E2E_TEST.test(f) && live(f),
   );
-  return { unitTests, testSupport, source };
+  const source = files.filter(
+    (f) =>
+      !UNIT_TEST.test(f) && !E2E_TEST.test(f) && !TEST_SUPPORT.test(f) && !NON_CODE.test(f),
+  );
+  return { unitTests, e2eTests, testSupport, source };
 }
 
-/** Why a range needs no red proof, or null when it does. */
-export function skipReason(title, { unitTests, testSupport, source }) {
-  if (source.length === 0) return 'no source file changed';
+/**
+ * Why a range needs no red proof, or null when it does. `warn` marks a skip
+ * that is a bypass rather than a proof, so CI can say so out loud.
+ */
+export function skipReason(title, { unitTests, e2eTests, source }) {
+  if (source.length === 0) return { reason: 'no source file changed', warn: false };
   // The title is unverified input, so it cannot excuse a changed test from the
   // proof: a behavior change mislabelled `refactor:` used to skip the gate
   // entirely. A skip-type title still excuses a source change that brings no
-  // test, which is what a real refactor looks like.
+  // test, which is what a real refactor looks like, and that skip is warned
+  // about because nothing verified the claim.
   if (unitTests.length > 0) return null;
+  if (source.every((f) => GATE_FILE.test(f))) {
+    return { reason: 'only gate files changed; a gate is proven red by scratch violation', warn: false };
+  }
   const type = /^([a-z]+)(\(.+\))?!?:/.exec(title ?? '')?.[1];
-  if (type && SKIP_TYPES.includes(type)) return `title type "${type}" carries no behavior change`;
-  if (testSupport.length > 0) {
-    return 'only browser e2e, gate, or test-support files changed; e2e needs a server, and a gate is proven red by scratch violation';
+  if (type && SKIP_TYPES.includes(type)) {
+    return { reason: `title type "${type}" carries no behavior change`, warn: true };
+  }
+  if (e2eTests.length > 0) {
+    return { reason: 'the only changed tests are end-to-end steps, which need a live server', warn: true };
   }
   return null;
 }
@@ -86,19 +115,83 @@ function git(args, cwd) {
   return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 }
 
+const lines = (text) => text.split('\n').filter(Boolean);
+
 /** A failure that says the symbol or module is missing, not that a value was wrong. */
 const MISSING_REFERENCE =
-  /is not a function|is not defined|is not a constructor|Cannot find module|Failed to resolve import|does not provide an export|Cannot read propert/;
+  /is not a function|is not defined|is not a constructor|Cannot find module|Failed to resolve import|does not provide an export|has no exported member/;
 
-/** Sort vitest failure messages into assertion failures and missing references. */
+/** Sort one file's failure messages into assertion failures and missing references. */
 export function classifyFailures(failures) {
   const missing = failures.filter((m) => MISSING_REFERENCE.test(m));
   return { assertion: failures.length - missing.length, missing: missing.length, sample: missing[0] };
 }
 
+/** Match a report entry to the repo-relative path the diff named. */
+function resultFor(fileResults, rel) {
+  return fileResults.find((r) => r.file === rel || r.file.endsWith(`/${rel}`) || rel.endsWith(r.file));
+}
+
+/**
+ * Judge each changed test file on its own run result. Returns the lines to
+ * print, the lines to raise as CI warnings, and an exit code, so the whole
+ * verdict is testable without git.
+ */
+export function judge(relative, { code, fileResults }) {
+  const out = [];
+  const warnings = [];
+  if (!Array.isArray(fileResults) || fileResults.length === 0) {
+    out.push(
+      `proven-red: the test command exited ${code} without producing a report. ` +
+        'That is a runner that did not run, not a test that went red. Fix the command or the worktree setup.',
+    );
+    return { lines: out, warnings, code: 2 };
+  }
+  const green = [];
+  const missingOnly = [];
+  let assertions = 0;
+  let missing = 0;
+  for (const rel of relative) {
+    const result = resultFor(fileResults, rel);
+    if (!result) {
+      out.push(`proven-red: ${rel} is in the range but the runner never opened it; the gate cannot prove it.`);
+      return { lines: out, warnings, code: 2 };
+    }
+    if (result.status !== 'failed') {
+      green.push(rel);
+      continue;
+    }
+    const kinds = classifyFailures(result.messages ?? []);
+    assertions += kinds.assertion;
+    missing += kinds.missing;
+    if (kinds.assertion === 0 && kinds.missing > 0) missingOnly.push({ rel, sample: kinds.sample });
+  }
+  if (green.length > 0) {
+    out.push(
+      `proven-red: ${green.length} changed test file(s) pass on the pre-change code; ` +
+        `they cannot catch the bug they claim to: ${green.join(', ')}`,
+    );
+    return { lines: out, warnings, code: 1 };
+  }
+  if (missingOnly.length > 0) {
+    const names = missingOnly.map((m) => m.rel).join(', ');
+    warnings.push(
+      'proven-red: these files fail on the pre-change code only because they reference code it does not ' +
+        `have, e.g. "${(missingOnly[0].sample ?? '').split('\n')[0]}": ${names}. That proves the code is new, ` +
+        'not that the assertions would catch a wrong value. Check those assertions in review, or run the ' +
+        'mutation smoke on the module.',
+    );
+  }
+  out.push(
+    `proven-red: changed tests fail on the pre-change code, as they should ` +
+      `(${assertions} assertion failure(s), ${missing} missing reference(s) across ${relative.length} file(s)).`,
+  );
+  return { lines: out, warnings, code: 0 };
+}
+
 /**
  * Run the head tests against the base code in a worktree.
- * `runTests(appDir, files)` returns the vitest exit code; injectable for tests.
+ * `runTests(appDir, files)` returns `{ code, fileResults }`; injectable for tests.
  */
 export function proveRed({ base, head, repo, title, runTests = runVitest, log = console.log }) {
   // The fork point, not `base` itself. CI passes
@@ -110,11 +203,14 @@ export function proveRed({ base, head, repo, title, runTests = runVitest, log = 
   // against: the pre-change code is the fork point, not whatever landed on
   // the base branch afterwards.
   const forkPoint = git(['merge-base', base, head], repo);
-  const files = git(['diff', '--name-only', `${forkPoint}..${head}`], repo).split('\n').filter(Boolean);
-  const split = classify(files);
+  const range = `${forkPoint}..${head}`;
+  const files = lines(git(['diff', '--name-only', range], repo));
+  const deleted = new Set(lines(git(['diff', '--name-only', '--diff-filter=D', range], repo)));
+  const split = classify(files, deleted);
   const skip = skipReason(title, split);
   if (skip) {
-    log(`proven-red: skipped, ${skip}.`);
+    const message = `proven-red: skipped, ${skip.reason}.`;
+    log(skip.warn && process.env.GITHUB_ACTIONS ? `::warning title=Proven red skipped::${message}` : message);
     return 0;
   }
   if (split.unitTests.length === 0) {
@@ -129,41 +225,25 @@ export function proveRed({ base, head, repo, title, runTests = runVitest, log = 
     // checkout may be on another branch, and a test copied from there
     // proves nothing. CI checks out head, so the two agree there.
     for (const f of [...split.unitTests, ...split.testSupport]) {
-      let content;
-      try {
-        content = execFileSync('git', ['show', `${head}:${f}`], { cwd: repo, encoding: 'utf8' });
-      } catch {
-        continue; // deleted at head
-      }
+      const content = execFileSync('git', ['show', `${head}:${f}`], { cwd: repo, encoding: 'utf8' });
       mkdirSync(path.dirname(path.join(worktree, f)), { recursive: true });
       writeFileSync(path.join(worktree, f), content);
     }
     // ADAPT: share installed dependencies with the worktree instead of reinstalling.
     const modules = path.join(repo, APP_DIR, 'node_modules');
-    if (existsSync(modules)) symlinkSync(modules, path.join(worktree, APP_DIR, 'node_modules'));
+    if (existsSync(modules)) {
+      mkdirSync(path.join(worktree, APP_DIR), { recursive: true });
+      symlinkSync(modules, path.join(worktree, APP_DIR, 'node_modules'));
+    }
 
     const prefix = APP_DIR ? `${APP_DIR}/` : '';
     const relative = split.unitTests.map((f) => (f.startsWith(prefix) ? f.slice(prefix.length) : f));
-    const result = runTests(path.join(worktree, APP_DIR), relative);
-    const { code, failures = [] } = typeof result === 'number' ? { code: result } : result;
-    if (code === 0) {
-      log(`proven-red: ${relative.length} changed test file(s) pass on the pre-change code; they cannot catch the bug they claim to.`);
-      return 1;
+    const verdict = judge(relative, runTests(path.join(worktree, APP_DIR), relative));
+    for (const line of verdict.warnings) {
+      log(process.env.GITHUB_ACTIONS ? `::warning title=Red by missing symbol only::${line}` : line);
     }
-    const kinds = classifyFailures(failures);
-    if (failures.length > 0 && kinds.assertion === 0) {
-      const warning =
-        `proven-red: the changed tests fail on the pre-change code only because they reference code it does not have ` +
-        `(${kinds.missing} failure(s), e.g. "${kinds.sample.split('\n')[0]}"). That proves the code is new, not that ` +
-        `the assertions would catch a wrong value. Check the assertions in review, or run npm run test:mutation on the module.`;
-      log(process.env.GITHUB_ACTIONS ? `::warning title=Red by missing symbol only::${warning}` : warning);
-      return 0;
-    }
-    log(
-      `proven-red: changed tests fail on the pre-change code, as they should` +
-        (failures.length ? ` (${kinds.assertion} assertion failure(s), ${kinds.missing} missing reference(s)).` : '.'),
-    );
-    return 0;
+    for (const line of verdict.lines) log(line);
+    return verdict.code;
   } finally {
     try {
       git(['worktree', 'remove', '--force', worktree], repo);
@@ -183,31 +263,47 @@ function runVitest(appDir, files) {
   } catch (error) {
     code = error.status ?? 1;
   }
-  return { code, failures: readFailures(report) };
+  return { code, fileResults: readFileResults(report) };
 }
 
-/** Every failure message in a vitest JSON report: per-test ones, and the file-level one when a file could not even load. */
-export function readFailures(report) {
+/**
+ * One entry per test file in a vitest JSON report: its status and every
+ * failure message, including the file-level one when the file could not even
+ * load. Per file, not pooled: a file's own result is the only thing that says
+ * whether that file proved anything.
+ */
+export function readFileResults(report) {
   if (!existsSync(report)) return [];
-  const failures = [];
-  for (const file of JSON.parse(readFileSync(report, 'utf8')).testResults ?? []) {
+  return (JSON.parse(readFileSync(report, 'utf8')).testResults ?? []).map((file) => {
     const perTest = (file.assertionResults ?? []).flatMap((t) => t.failureMessages ?? []);
-    failures.push(...perTest);
-    if (perTest.length === 0 && file.status === 'failed' && file.message) failures.push(file.message);
-  }
-  return failures;
+    const messages = perTest.length === 0 && file.status === 'failed' && file.message ? [file.message] : perTest;
+    return { file: file.name, status: file.status, messages };
+  });
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const [base, head] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
-  const titleIndex = process.argv.indexOf('--title');
+// Compare real paths: a checkout reached through a symlink (macOS /tmp and
+// /var are symlinks) made argv[1] and import.meta.url disagree, and the gate
+// exited 0 having run nothing at all.
+const invokedDirectly = () => {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+};
+
+if (invokedDirectly()) {
+  const argv = process.argv.slice(2);
+  const titleIndex = argv.indexOf('--title');
+  const positional = argv.filter((a, i) => !a.startsWith('--') && i !== titleIndex + 1);
+  const [base, head] = positional;
   const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  // An empty --title (a push event has no PR title) falls back to the head subject.
-  const title =
-    (titleIndex > -1 && process.argv[titleIndex + 1]) || git(['log', '-1', '--format=%s', head], repo);
   if (!base || !head) {
     console.error('usage: proven-red.mjs <base> <head> [--title "<title>"]');
     process.exit(2);
   }
+  // An empty --title (a push event has no PR title) falls back to the head subject.
+  const title = (titleIndex > -1 && argv[titleIndex + 1]) || git(['log', '-1', '--format=%s', head], repo);
   process.exit(proveRed({ base, head, repo, title }));
 }

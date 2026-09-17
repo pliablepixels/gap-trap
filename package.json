@@ -1,0 +1,8 @@
+{
+  "name": "gap-trap",
+  "private": true,
+  "description": "Tests for the gap-trap gate templates.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  }
+}

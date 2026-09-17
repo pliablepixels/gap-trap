@@ -7,7 +7,14 @@
 #
 # Fails when `## Acceptance` has no content after HTML comments are removed,
 # and, on a feat title, when `## Spec` has none.
+#
+# Exit codes: 0 sections present, 1 a section is empty, 2 the check could not
+# run.
 set -u
+# perl is the one tool here the shell gates do not otherwise need. Without it
+# the pipeline below yields an empty section and every PR reads as missing its
+# acceptance lines, so say what is wrong instead of guessing a verdict.
+command -v perl >/dev/null 2>&1 || { echo "::error title=pr-body-check cannot run::perl is not installed"; exit 2; }
 : "${PR_BODY:?PR_BODY is required}"
 : "${PR_TITLE:=}"
 
