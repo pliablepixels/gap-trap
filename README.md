@@ -44,6 +44,8 @@ Works with any language. Node and Python repos get gates inside their
 test suite; everything else (Go, Rust, Java, Ruby, .NET, PHP, Swift, C++)
 gets shell versions that need only git, grep, awk, and your test command.
 
+**IMPORTANT**: Validate the rules/contracts that are generated. This is where it is important to review thouroughly so you start with a strong foundation.
+
 ## Install
 
 With the [skills](https://github.com/vercel-labs/skills) CLI:
