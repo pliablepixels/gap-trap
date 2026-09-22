@@ -202,7 +202,7 @@ pushed there. A GitLab remote gets the three jobs as `.gitlab-ci.yml`.
 
 ## What not to add
 
-- Coverage thresholds nothing on a PR runs. A ratchet on what tests
+- Coverage thresholds gate nothing on a PR run. A ratchet on what tests
   catch beats a percentage.
 - A second run of the same linter (an advisory pass beside a ratchet).
 - Any gate whose input you have not read once. A gate that scans
