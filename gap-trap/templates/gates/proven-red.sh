@@ -10,6 +10,9 @@
 # Each changed test file is run and judged on its own. One file that fails
 # carries no proof for the others: a run that batched them together let a test
 # which passed on the old code ride out on a failing sibling's exit status.
+# Inside one file it still can: the verdict is the file's exit status, and
+# telling a new test from an old one needs per-test results, which only a
+# runner-specific port can read (proven-red.mjs does it for vitest).
 #
 # It also reads the run's output twice. A red made only of missing symbols
 # ("undefined:", "ImportError", "is not a function") proves the code is new,

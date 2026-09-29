@@ -1,10 +1,10 @@
 // Proven-red gate. Each case names the defect it guards against; the comment
 // says what the gate used to do instead.
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { GATES, commit, git, makeRepo, sh, tempDir, writeFiles } from './helpers.mjs';
+import { GATES, commit, git, makeRepo, run, sh, tempDir, writeFiles } from './helpers.mjs';
 
 const { classify, skipReason, judge, readFileResults, proveRed } = await import(
   path.join(GATES, 'proven-red.mjs')
@@ -121,6 +121,35 @@ describe('judge', () => {
     });
   }
 
+  // #2: the verdict was the file's, so a new test that passed on the old code
+  // rode out on an updated sibling test that failed in the same file.
+  const withTests = (result, tests) => ({
+    ...result,
+    tests: Object.entries(tests).map(([name, status]) => ({ name, status })),
+  });
+
+  it('#2: a new test green on the old code fails the gate though its sibling failed', () => {
+    const result = withTests(failed(UNIT, 'expected 1 to be 2'), { labels: 'failed', clamps: 'passed', swapped: 'passed' });
+    const v = judge([UNIT], { code: 1, fileResults: [result] }, new Map([[UNIT, new Set(['labels', 'clamps'])]]));
+    assert.equal(v.code, 1);
+    assert.match(v.lines[0], /1 new test\(s\) pass on the pre-change code/);
+    assert.match(v.lines[0], /swapped/);
+    assert.doesNotMatch(v.lines[0], /clamps/);
+  });
+
+  it('#2: every test in a file new at head is new', () => {
+    const result = withTests(failed(UNIT, 'expected 1 to be 2'), { red: 'failed', green: 'passed' });
+    const v = judge([UNIT], { code: 1, fileResults: [result] });
+    assert.equal(v.code, 1);
+    assert.match(v.lines[0], /green/);
+  });
+
+  it('#2: old tests that still pass beside a new red one are a proof', () => {
+    const result = withTests(failed(UNIT, 'expected 1 to be 2'), { old: 'passed', fresh: 'failed', later: 'skipped' });
+    const v = judge([UNIT], { code: 1, fileResults: [result] }, new Map([[UNIT, new Set(['old'])]]));
+    assert.equal(v.code, 0);
+  });
+
   it('warns when a file is red only by missing symbol', () => {
     const v = judge([UNIT], { code: 1, fileResults: [failed(UNIT, 'Cannot find module "./new"')] });
     assert.equal(v.code, 0);
@@ -150,14 +179,23 @@ describe('readFileResults', () => {
       report,
       JSON.stringify({
         testResults: [
-          { name: `/repo/${UNIT}`, status: 'failed', assertionResults: [{ failureMessages: ['boom'] }] },
+          {
+            name: `/repo/${UNIT}`,
+            status: 'failed',
+            assertionResults: [{ fullName: 'thing works', status: 'failed', failureMessages: ['boom'] }],
+          },
           { name: `/repo/${OTHER}`, status: 'passed', assertionResults: [{ failureMessages: [] }] },
         ],
       }),
     );
     const results = readFileResults(report);
     assert.equal(results.length, 2);
-    assert.deepEqual(results[0], { file: `/repo/${UNIT}`, status: 'failed', messages: ['boom'] });
+    assert.deepEqual(results[0], {
+      file: `/repo/${UNIT}`,
+      status: 'failed',
+      messages: ['boom'],
+      tests: [{ name: 'thing works', status: 'failed' }],
+    });
     assert.deepEqual(results[1].messages, []);
   });
 
@@ -227,6 +265,46 @@ describe('proveRed over a real range', () => {
     });
     assert.equal(code, 1);
     assert.match(lines.join('\n'), /pass on the pre-change code/);
+  });
+
+  // #2: the names that count as old come from running the fork-point copy.
+  it('#2: tests new since the fork point are named by running the old copy first', () => {
+    const dir = repoWithChange({
+      'app/src/thing.ts': 'export const thing = () => 2;\n',
+      'app/src/thing.test.ts': 'test("old", () => {}); test("new", () => {});\n',
+    });
+    const lines = [];
+    const runs = [];
+    const code = proveRed({
+      base: 'HEAD~1',
+      head: 'HEAD',
+      repo: dir,
+      title: 'fix: thing',
+      log: (l) => lines.push(l),
+      runTests: (appDir, files) => {
+        const source = readFileSync(path.join(appDir, files[0]), 'utf8');
+        runs.push(source);
+        const names = [...source.matchAll(/test\("(\w+)"/g)].map((m) => m[1]);
+        const tests = names.map((name) => ({ name, status: name === 'old' ? 'failed' : 'passed' }));
+        return { code: 1, fileResults: files.map((f) => ({ file: f, status: 'failed', messages: ['expected 1 to be 2'], tests })) };
+      },
+    });
+    assert.equal(runs.length, 2);
+    assert.doesNotMatch(runs[0], /new/);
+    assert.equal(code, 1);
+    assert.match(lines.join('\n'), /src\/thing\.test\.ts > new/);
+  });
+
+  // #2: with no --title, the argument after --title was taken to be index 0,
+  // so <base> was dropped and every local run printed the usage line.
+  it('#2: runs without --title', () => {
+    const dir = makeRepo({ 'README.md': '# fixture\n' });
+    mkdirSync(path.join(dir, 'scripts'));
+    copyFileSync(path.join(GATES, 'proven-red.mjs'), path.join(dir, 'scripts', 'proven-red.mjs'));
+    commit(dir, { 'README.md': '# changed\n' }, 'docs: readme');
+    const r = run('node', ['scripts/proven-red.mjs', 'HEAD~1', 'HEAD'], { cwd: dir });
+    assert.equal(r.status, 0, r.out);
+    assert.match(r.out, /proven-red: skipped/);
   });
 
   // N2

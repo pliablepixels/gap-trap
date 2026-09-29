@@ -95,8 +95,14 @@ Spec: for a PR range, take the unit test files changed since the fork
 point, copy them into a worktree at the fork point, run each one there,
 and fail when it passes. Judge each file on its own result: batched into
 one run and one exit status, a file that passed on the old code rides
-out on a failing sibling. A test deleted at head is not run, because the
-worktree still holds its older copy, which passes.
+out on a failing sibling. The same holds for tests inside one file where
+the runner reports each test: a test whose name the fork-point copy of
+the file lacks is new, and a new test that passes on the old code fails
+the gate even when another test in its file went red. The Node port gets
+the old names by running the fork-point copy first. The shell port only
+sees a file's exit status, so there a new test can still ride out on a
+failing test in the same file. A test deleted at head is not run, because
+the worktree still holds its older copy, which passes.
 
 Skip and say why when no source changed, when the only source changes
 are the gate scripts (proven red by scratch violation), when the title

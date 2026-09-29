@@ -17,7 +17,10 @@
  *
  * Every changed test file is judged on its own. One file that fails carries
  * no proof for the others: a run that batched them together let a test which
- * passed on the old code ride out on a failing sibling's exit code.
+ * passed on the old code ride out on a failing sibling's exit code. The same
+ * holds inside a file: a test whose name the fork-point copy of its file does
+ * not have is new, and a new test that passes on the old code fails the gate
+ * even when another test in its file went red (issue #2).
  *
  * Skips, and says so: a range that changes no source; a range whose only
  * source changes are the gate scripts themselves (proven red by scratch
@@ -137,7 +140,7 @@ function resultFor(fileResults, rel) {
  * print, the lines to raise as CI warnings, and an exit code, so the whole
  * verdict is testable without git.
  */
-export function judge(relative, { code, fileResults }) {
+export function judge(relative, { code, fileResults }, oldNames = new Map()) {
   const out = [];
   const warnings = [];
   if (!Array.isArray(fileResults) || fileResults.length === 0) {
@@ -148,6 +151,7 @@ export function judge(relative, { code, fileResults }) {
     return { lines: out, warnings, code: 2 };
   }
   const green = [];
+  const newGreen = [];
   const missingOnly = [];
   let assertions = 0;
   let missing = 0;
@@ -161,6 +165,12 @@ export function judge(relative, { code, fileResults }) {
       green.push(rel);
       continue;
     }
+    // A file absent at the fork point has no old names: every test in it is new.
+    // ponytail: an old name whose body changed is not caught; that needs a diff of test bodies.
+    const old = oldNames.get(rel) ?? new Set();
+    for (const t of result.tests ?? []) {
+      if (t.status === 'passed' && !old.has(t.name)) newGreen.push(`${rel} > ${t.name}`);
+    }
     const kinds = classifyFailures(result.messages ?? []);
     assertions += kinds.assertion;
     missing += kinds.missing;
@@ -170,6 +180,13 @@ export function judge(relative, { code, fileResults }) {
     out.push(
       `proven-red: ${green.length} changed test file(s) pass on the pre-change code; ` +
         `they cannot catch the bug they claim to: ${green.join(', ')}`,
+    );
+    return { lines: out, warnings, code: 1 };
+  }
+  if (newGreen.length > 0) {
+    out.push(
+      `proven-red: ${newGreen.length} new test(s) pass on the pre-change code, though a sibling in the ` +
+        `same file failed; they cannot catch the bug they claim to: ${newGreen.join(', ')}`,
     );
     return { lines: out, warnings, code: 1 };
   }
@@ -221,6 +238,27 @@ export function proveRed({ base, head, repo, title, runTests = runVitest, log = 
   const worktree = mkdtempSync(path.join(tmpdir(), 'proven-red-'));
   try {
     git(['worktree', 'add', '--detach', '-q', worktree, forkPoint], repo);
+    // ADAPT: share installed dependencies with the worktree instead of reinstalling.
+    const modules = path.join(repo, APP_DIR, 'node_modules');
+    if (existsSync(modules)) {
+      mkdirSync(path.join(worktree, APP_DIR), { recursive: true });
+      symlinkSync(modules, path.join(worktree, APP_DIR, 'node_modules'));
+    }
+    const prefix = APP_DIR ? `${APP_DIR}/` : '';
+    const toRelative = (f) => (f.startsWith(prefix) ? f.slice(prefix.length) : f);
+    const appDir = path.join(worktree, APP_DIR);
+
+    // Which tests are new: run the fork-point copies first and take their
+    // names from the same report, so old and new names are spelled alike.
+    const existing = split.unitTests.filter((f) => existsSync(path.join(worktree, f))).map(toRelative);
+    const oldNames = new Map();
+    if (existing.length > 0) {
+      const { fileResults } = runTests(appDir, existing);
+      for (const rel of existing) {
+        oldNames.set(rel, new Set((resultFor(fileResults, rel)?.tests ?? []).map((t) => t.name)));
+      }
+    }
+
     // Read the head versions from git, not the working tree: locally the
     // checkout may be on another branch, and a test copied from there
     // proves nothing. CI checks out head, so the two agree there.
@@ -229,16 +267,9 @@ export function proveRed({ base, head, repo, title, runTests = runVitest, log = 
       mkdirSync(path.dirname(path.join(worktree, f)), { recursive: true });
       writeFileSync(path.join(worktree, f), content);
     }
-    // ADAPT: share installed dependencies with the worktree instead of reinstalling.
-    const modules = path.join(repo, APP_DIR, 'node_modules');
-    if (existsSync(modules)) {
-      mkdirSync(path.join(worktree, APP_DIR), { recursive: true });
-      symlinkSync(modules, path.join(worktree, APP_DIR, 'node_modules'));
-    }
 
-    const prefix = APP_DIR ? `${APP_DIR}/` : '';
-    const relative = split.unitTests.map((f) => (f.startsWith(prefix) ? f.slice(prefix.length) : f));
-    const verdict = judge(relative, runTests(path.join(worktree, APP_DIR), relative));
+    const relative = split.unitTests.map(toRelative);
+    const verdict = judge(relative, runTests(appDir, relative), oldNames);
     for (const line of verdict.warnings) {
       log(process.env.GITHUB_ACTIONS ? `::warning title=Red by missing symbol only::${line}` : line);
     }
@@ -269,15 +300,16 @@ function runVitest(appDir, files) {
 /**
  * One entry per test file in a vitest JSON report: its status and every
  * failure message, including the file-level one when the file could not even
- * load. Per file, not pooled: a file's own result is the only thing that says
- * whether that file proved anything.
+ * load, and each test's name and status. Per file, not pooled: a file's own
+ * result is the only thing that says whether that file proved anything.
  */
 export function readFileResults(report) {
   if (!existsSync(report)) return [];
   return (JSON.parse(readFileSync(report, 'utf8')).testResults ?? []).map((file) => {
     const perTest = (file.assertionResults ?? []).flatMap((t) => t.failureMessages ?? []);
     const messages = perTest.length === 0 && file.status === 'failed' && file.message ? [file.message] : perTest;
-    return { file: file.name, status: file.status, messages };
+    const tests = (file.assertionResults ?? []).map((t) => ({ name: t.fullName ?? t.title, status: t.status }));
+    return { file: file.name, status: file.status, messages, tests };
   });
 }
 
@@ -296,7 +328,7 @@ const invokedDirectly = () => {
 if (invokedDirectly()) {
   const argv = process.argv.slice(2);
   const titleIndex = argv.indexOf('--title');
-  const positional = argv.filter((a, i) => !a.startsWith('--') && i !== titleIndex + 1);
+  const positional = argv.filter((a, i) => !a.startsWith('--') && (titleIndex === -1 || i !== titleIndex + 1));
   const [base, head] = positional;
   const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   if (!base || !head) {
