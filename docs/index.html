@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>gap-trap Briefing</title>
+<link rel="icon" href="gap-trap.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -70,11 +71,12 @@ code, .mono { font-family: var(--mono); font-size: .88em; }
 ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; max-width: 74ch; }
 
 /* Title slide */
+.brandrow { display: flex; align-items: center; gap: clamp(14px, 2.5vw, 28px); flex-wrap: wrap; }
+.logo { width: clamp(84px, 11vw, 140px); height: auto; aspect-ratio: 435 / 440; max-width: 100%; }
+.bar .mark { width: 28px; height: 28px; }
 .tagline2 { font: 600 clamp(1.05rem, 1.8vw, 1.4rem)/1.3 var(--display); color: var(--gate); max-width: 44ch; text-wrap: balance; }
 .tagline { font: 700 clamp(1.3rem, 2.6vw, 2rem)/1.2 var(--display); color: var(--ink); max-width: 30ch; text-wrap: balance; }
 .title-slide .inner { align-content: center; min-height: 100%; }
-.hazard { height: 14px; max-width: 340px; border-radius: 2px;
-  background: repeating-linear-gradient(-45deg, var(--gate) 0 12px, transparent 12px 24px); }
 
 /* Before / after panels */
 .ba { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(12px, 2vw, 24px); }
@@ -233,9 +235,8 @@ pre.code b { color: var(--gate); font-weight: 500; }
 <!-- 1 -->
 <section class="slide title-slide" aria-label="Title">
   <div class="inner">
-    <div class="hazard" aria-hidden="true"></div>
     <div class="eyebrow">Briefing · quality controls for agent-written code</div>
-    <h1>gap-trap</h1>
+    <div class="brandrow"><img class="logo" src="gap-trap.png" alt="gap-trap logo: a net catching code puzzle pieces"><h1>gap-trap</h1></div>
     <p class="tagline">gap-trap enforces best practices in a way agents can better understand and consistently follow.</p>
     <p class="tagline2">It is also self-improving. Agents will always make some mistakes, so every mistake that gets through becomes a new rule and check.</p>
     <a class="gh big" href="https://github.com/pliablepixels/gap-trap"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg><span>github.com/pliablepixels/gap-trap</span></a>
@@ -631,6 +632,7 @@ Gate:  instruction-gate test</pre>
 
 </main>
 <nav class="bar" aria-label="Slide navigation">
+  <img class="mark" src="gap-trap.png" alt="">
   <button type="button" id="prev">← Back</button>
   <div class="dots" id="dots"></div>
   <span class="count" id="count" aria-live="polite"></span>
